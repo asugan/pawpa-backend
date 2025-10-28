@@ -36,4 +36,7 @@ router.delete('/:id', petController.deletePet);
 
 router.post('/:id/photo', validateRequest(updatePhotoSchema), petController.updatePetPhoto);
 
+// Health records sub-routes
+router.get('/:id/health-records', petController.getPetHealthRecords);
+
 export default router;

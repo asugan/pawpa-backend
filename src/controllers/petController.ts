@@ -1,14 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import { PetService } from '../services/petService';
+import { HealthRecordService } from '../services/healthRecordService';
 import { successResponse, errorResponse, getPaginationParams } from '../utils/response';
 import { CreatePetRequest, UpdatePetRequest, PetQueryParams, Pet } from '../types/api';
 import { createError } from '../middleware/errorHandler';
 
 export class PetController {
   private petService: PetService;
+  private healthRecordService: HealthRecordService;
 
   constructor() {
     this.petService = new PetService();
+    this.healthRecordService = new HealthRecordService();
   }
 
   // GET /api/pets - Get all pets
@@ -146,6 +149,32 @@ export class PetController {
       }
 
       successResponse(res, pet);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // GET /api/pets/:id/health-records - Get pet's health records
+  getPetHealthRecords = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        throw createError('Pet ID is required', 400, 'MISSING_ID');
+      }
+
+      // Optional query parameters for filtering
+      const params = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 50, // Get more records for mobile app
+        type: req.query.type as string,
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
+      };
+
+      const healthRecords = await this.healthRecordService.getHealthRecordsByPetId(id, params);
+
+      successResponse(res, healthRecords.records);
     } catch (error) {
       next(error);
     }
