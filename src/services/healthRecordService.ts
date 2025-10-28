@@ -63,6 +63,9 @@ export class HealthRecordService {
         cost: healthRecords.cost,
         nextDueDate: healthRecords.nextDueDate,
         attachments: healthRecords.attachments,
+        vaccineName: healthRecords.vaccineName,
+        vaccineManufacturer: healthRecords.vaccineManufacturer,
+        batchNumber: healthRecords.batchNumber,
         createdAt: healthRecords.createdAt,
       })
       .from(healthRecords)

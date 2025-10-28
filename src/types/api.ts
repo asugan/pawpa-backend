@@ -59,6 +59,9 @@ export interface CreateHealthRecordRequest {
   cost?: number;
   nextDueDate?: string;
   attachments?: string;
+  vaccineName?: string;
+  vaccineManufacturer?: string;
+  batchNumber?: string;
 }
 
 export interface UpdateHealthRecordRequest {
@@ -71,6 +74,9 @@ export interface UpdateHealthRecordRequest {
   cost?: number;
   nextDueDate?: string;
   attachments?: string;
+  vaccineName?: string;
+  vaccineManufacturer?: string;
+  batchNumber?: string;
 }
 
 export interface CreateEventRequest {

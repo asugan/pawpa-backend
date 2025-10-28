@@ -28,6 +28,9 @@ export const healthRecords = sqliteTable('health_records', {
   cost: real('cost'),
   nextDueDate: integer('next_due_date', { mode: 'timestamp' }),
   attachments: text('attachments'),
+  vaccineName: text('vaccine_name'),
+  vaccineManufacturer: text('vaccine_manufacturer'),
+  batchNumber: text('batch_number'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
 
