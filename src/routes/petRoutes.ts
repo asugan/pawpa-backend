@@ -14,7 +14,7 @@ const createPetSchema = z.object({
   birthDate: z.string().datetime().optional(),
   weight: z.number().positive().optional(),
   gender: z.enum(['male', 'female', 'other']).optional(),
-  profilePhoto: z.string().url().optional(),
+  profilePhoto: z.string().url().optional().nullable(),
 });
 
 const updatePetSchema = createPetSchema.partial();
