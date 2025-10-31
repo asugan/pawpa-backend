@@ -22,7 +22,7 @@ const createEventSchema = z.object({
 const updateEventSchema = createEventSchema.partial();
 
 const dateParamSchema = z.object({
-  date: z.string().datetime('Invalid date format'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (expected YYYY-MM-DD)'),
 });
 
 // Routes
