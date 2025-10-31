@@ -3,7 +3,7 @@ import { FeedingScheduleController } from '../controllers/feedingScheduleControl
 import { validateRequest } from '../middleware/validation';
 import { z } from 'zod';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 const feedingScheduleController = new FeedingScheduleController();
 
 // Validation schemas
@@ -24,6 +24,8 @@ router.get('/active', feedingScheduleController.getActiveSchedules);
 router.get('/today', feedingScheduleController.getTodaySchedules);
 
 router.get('/next', feedingScheduleController.getNextFeedingTime);
+
+router.get('/', feedingScheduleController.getFeedingSchedulesByPetId);
 
 router.get('/:id', feedingScheduleController.getFeedingScheduleById);
 

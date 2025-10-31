@@ -3,7 +3,7 @@ import { HealthRecordController } from '../controllers/healthRecordController';
 import { validateRequest } from '../middleware/validation';
 import { z } from 'zod';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 const healthRecordController = new HealthRecordController();
 
 // Validation schemas
@@ -36,6 +36,8 @@ const updateHealthRecordSchema = createHealthRecordSchema.partial();
 
 // Routes
 router.get('/upcoming', healthRecordController.getUpcomingVaccinations);
+
+router.get('/', healthRecordController.getHealthRecordsByPetId);
 
 router.get('/:id', healthRecordController.getHealthRecordById);
 

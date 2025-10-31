@@ -3,7 +3,7 @@ import { EventController } from '../controllers/eventController';
 import { validateRequest } from '../middleware/validation';
 import { z } from 'zod';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 const eventController = new EventController();
 
 // Validation schemas
@@ -34,6 +34,8 @@ router.get('/calendar/:date',
   validateRequest(dateParamSchema, 'params'),
   eventController.getEventsByDate
 );
+
+router.get('/', eventController.getEventsByPetId);
 
 router.get('/:id', eventController.getEventById);
 
