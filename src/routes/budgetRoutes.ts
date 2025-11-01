@@ -44,6 +44,7 @@ const updateBudgetLimitSchema = z.object({
 // Special routes (must come before parameterized routes)
 router.get('/active', budgetController.getActiveBudgetLimits);
 router.get('/alerts', budgetController.checkBudgetAlerts);
+router.get('/statuses', budgetController.getAllBudgetStatuses);
 
 // Standard CRUD routes
 router.get('/', budgetController.getBudgetLimitsByPetId);

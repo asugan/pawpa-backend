@@ -167,4 +167,15 @@ export class BudgetController {
       next(error);
     }
   };
+
+  // GET /api/budget-limits/statuses - Get all budget statuses
+  getAllBudgetStatuses = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const petId = req.query.petId as string;
+      const statuses = await this.budgetService.getAllBudgetStatuses(petId);
+      successResponse(res, statuses);
+    } catch (error) {
+      next(error);
+    }
+  };
 }
