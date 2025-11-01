@@ -120,7 +120,20 @@ export interface UpdateFeedingScheduleRequest {
 }
 
 // Database entity types (re-exported from schema)
-export type { Pet, NewPet, HealthRecord, NewHealthRecord, Event, NewEvent, FeedingSchedule, NewFeedingSchedule } from '../models/schema';
+export type {
+  Pet,
+  NewPet,
+  HealthRecord,
+  NewHealthRecord,
+  Event,
+  NewEvent,
+  FeedingSchedule,
+  NewFeedingSchedule,
+  Expense,
+  NewExpense,
+  BudgetLimit,
+  NewBudgetLimit
+} from '../models/schema';
 
 // Query parameter types
 export interface PetQueryParams extends PaginationParams {
@@ -145,4 +158,66 @@ export interface EventQueryParams extends PaginationParams {
 export interface FeedingScheduleQueryParams extends PaginationParams {
   isActive?: boolean;
   foodType?: string;
+}
+
+// Expense types
+export interface CreateExpenseRequest {
+  petId: string;
+  category: string;
+  amount: number;
+  currency: string;
+  paymentMethod?: string;
+  description?: string;
+  date: string;
+  receiptPhoto?: string;
+  vendor?: string;
+  notes?: string;
+}
+
+export interface UpdateExpenseRequest {
+  category?: string;
+  amount?: number;
+  currency?: string;
+  paymentMethod?: string;
+  description?: string;
+  date?: string;
+  receiptPhoto?: string;
+  vendor?: string;
+  notes?: string;
+}
+
+export interface ExpenseQueryParams extends PaginationParams {
+  category?: string;
+  startDate?: string;
+  endDate?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  currency?: string;
+  paymentMethod?: string;
+}
+
+// Budget types
+export interface CreateBudgetLimitRequest {
+  petId: string;
+  category?: string;
+  amount: number;
+  currency: string;
+  period: 'monthly' | 'yearly';
+  alertThreshold?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateBudgetLimitRequest {
+  category?: string;
+  amount?: number;
+  currency?: string;
+  period?: 'monthly' | 'yearly';
+  alertThreshold?: number;
+  isActive?: boolean;
+}
+
+export interface BudgetQueryParams extends PaginationParams {
+  period?: string;
+  isActive?: boolean;
+  category?: string;
 }

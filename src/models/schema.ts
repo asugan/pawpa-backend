@@ -61,11 +61,42 @@ export const feedingSchedules = sqliteTable('feeding_schedules', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
 
+// Expenses table
+export const expenses = sqliteTable('expenses', {
+  id: text('id').primaryKey(),
+  petId: text('pet_id').notNull().references(() => pets.id, { onDelete: 'cascade' }),
+  category: text('category').notNull(), // 'food', 'veterinary', 'medication', etc.
+  amount: real('amount').notNull(),
+  currency: text('currency').notNull().default('TRY'), // TRY, USD, EUR, etc.
+  paymentMethod: text('payment_method'), // 'cash', 'credit_card', 'debit_card', 'bank_transfer'
+  description: text('description'),
+  date: integer('date', { mode: 'timestamp' }).notNull(),
+  receiptPhoto: text('receipt_photo'), // URL/path to receipt image
+  vendor: text('vendor'), // Store/clinic name
+  notes: text('notes'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
+// Budget limits table
+export const budgetLimits = sqliteTable('budget_limits', {
+  id: text('id').primaryKey(),
+  petId: text('pet_id').notNull().references(() => pets.id, { onDelete: 'cascade' }),
+  category: text('category'), // null = overall budget
+  amount: real('amount').notNull(),
+  currency: text('currency').notNull().default('TRY'),
+  period: text('period').notNull(), // 'monthly', 'yearly'
+  alertThreshold: real('alert_threshold').notNull().default(0.8), // Alert at 80%
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
 // Relations
 export const petsRelations = relations(pets, ({ many }) => ({
   healthRecords: many(healthRecords),
   events: many(events),
   feedingSchedules: many(feedingSchedules),
+  expenses: many(expenses),
+  budgetLimits: many(budgetLimits),
 }));
 
 export const healthRecordsRelations = relations(healthRecords, ({ one }) => ({
@@ -89,6 +120,20 @@ export const feedingSchedulesRelations = relations(feedingSchedules, ({ one }) =
   }),
 }));
 
+export const expensesRelations = relations(expenses, ({ one }) => ({
+  pet: one(pets, {
+    fields: [expenses.petId],
+    references: [pets.id],
+  }),
+}));
+
+export const budgetLimitsRelations = relations(budgetLimits, ({ one }) => ({
+  pet: one(pets, {
+    fields: [budgetLimits.petId],
+    references: [pets.id],
+  }),
+}));
+
 // Types
 export type Pet = typeof pets.$inferSelect;
 export type NewPet = typeof pets.$inferInsert;
@@ -98,3 +143,7 @@ export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
 export type FeedingSchedule = typeof feedingSchedules.$inferSelect;
 export type NewFeedingSchedule = typeof feedingSchedules.$inferInsert;
+export type Expense = typeof expenses.$inferSelect;
+export type NewExpense = typeof expenses.$inferInsert;
+export type BudgetLimit = typeof budgetLimits.$inferSelect;
+export type NewBudgetLimit = typeof budgetLimits.$inferInsert;

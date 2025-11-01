@@ -22,7 +22,7 @@ sqlite.pragma('foreign_keys = ON');
 export const db = drizzle(sqlite, { schema });
 
 // Export database instance for raw queries if needed
-export { sqlite };
+export const sqliteDb: Database.Database = sqlite;
 
 // Export schema for convenience
 export * from '../models/schema';
