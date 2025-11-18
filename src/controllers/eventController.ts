@@ -12,20 +12,17 @@ export class EventController {
     this.eventService = new EventService();
   }
 
-  // GET /api/pets/:petId/events - Get events for a pet
+  // GET /api/events OR /api/pets/:petId/events - Get events (optionally filtered by pet)
   getEventsByPetId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { petId } = req.params;
+      // Support both URL params (/pets/:petId/events) and query string (/events?petId=...)
+      const petId = req.params.petId || (req.query.petId as string);
       const params: EventQueryParams = {
         ...getPaginationParams(req.query),
         type: req.query.type as string,
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
       };
-
-      if (!petId) {
-        throw createError('Pet ID is required', 400, 'MISSING_PET_ID');
-      }
 
       const { events, total } = await this.eventService.getEventsByPetId(petId, params);
       const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };

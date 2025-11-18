@@ -5,12 +5,17 @@ import { Expense, NewExpense } from '../models/schema';
 import { generateId } from '../utils/id';
 
 export class ExpenseService {
-  async getExpensesByPetId(petId: string, params: ExpenseQueryParams): Promise<{ expenses: Expense[]; total: number }> {
-    const { page = 1, limit = 10, category, startDate, endDate, minAmount, maxAmount, currency, paymentMethod } = params;
+  async getExpensesByPetId(petId?: string, params?: ExpenseQueryParams): Promise<{ expenses: Expense[]; total: number }> {
+    const { page = 1, limit = 10, category, startDate, endDate, minAmount, maxAmount, currency, paymentMethod } = params || {};
     const offset = (page - 1) * limit;
 
     // Build where conditions
-    const conditions = [eq(expenses.petId, petId)];
+    const conditions = [];
+
+    // Only filter by petId if provided
+    if (petId) {
+      conditions.push(eq(expenses.petId, petId));
+    }
 
     if (category) {
       conditions.push(eq(expenses.category, category));
@@ -40,7 +45,7 @@ export class ExpenseService {
       conditions.push(lte(expenses.amount, maxAmount));
     }
 
-    const whereClause = and(...conditions);
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count
     const result = await db

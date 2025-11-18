@@ -5,12 +5,17 @@ import { FeedingSchedule, NewFeedingSchedule } from '../models/schema';
 import { generateId } from '../utils/id';
 
 export class FeedingScheduleService {
-  async getFeedingSchedulesByPetId(petId: string, params: FeedingScheduleQueryParams): Promise<{ schedules: FeedingSchedule[]; total: number }> {
-    const { page = 1, limit = 10, isActive, foodType } = params;
+  async getFeedingSchedulesByPetId(petId?: string, params?: FeedingScheduleQueryParams): Promise<{ schedules: FeedingSchedule[]; total: number }> {
+    const { page = 1, limit = 10, isActive, foodType } = params || {};
     const offset = (page - 1) * limit;
 
     // Build where conditions
-    const conditions = [eq(feedingSchedules.petId, petId)];
+    const conditions = [];
+
+    // Only filter by petId if provided
+    if (petId) {
+      conditions.push(eq(feedingSchedules.petId, petId));
+    }
 
     if (isActive !== undefined) {
       conditions.push(eq(feedingSchedules.isActive, isActive));
@@ -20,7 +25,7 @@ export class FeedingScheduleService {
       conditions.push(eq(feedingSchedules.foodType, foodType));
     }
 
-    const whereClause = and(...conditions);
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count
     const result = await db

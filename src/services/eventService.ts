@@ -5,12 +5,17 @@ import { Event, NewEvent } from '../models/schema';
 import { generateId } from '../utils/id';
 
 export class EventService {
-  async getEventsByPetId(petId: string, params: EventQueryParams): Promise<{ events: Event[]; total: number }> {
-    const { page = 1, limit = 10, type, startDate, endDate } = params;
+  async getEventsByPetId(petId?: string, params?: EventQueryParams): Promise<{ events: Event[]; total: number }> {
+    const { page = 1, limit = 10, type, startDate, endDate } = params || {};
     const offset = (page - 1) * limit;
 
     // Build where conditions
-    const conditions = [eq(events.petId, petId)];
+    const conditions = [];
+
+    // Only filter by petId if provided
+    if (petId) {
+      conditions.push(eq(events.petId, petId));
+    }
 
     if (type) {
       conditions.push(eq(events.type, type));
@@ -24,7 +29,7 @@ export class EventService {
       conditions.push(lte(events.startTime, new Date(endDate)));
     }
 
-    const whereClause = and(...conditions);
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count
     const result = await db

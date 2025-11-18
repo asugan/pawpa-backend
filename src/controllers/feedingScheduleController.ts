@@ -12,19 +12,16 @@ export class FeedingScheduleController {
     this.feedingScheduleService = new FeedingScheduleService();
   }
 
-  // GET /api/pets/:petId/feeding-schedules - Get feeding schedules for a pet
+  // GET /api/feeding-schedules OR /api/pets/:petId/feeding-schedules - Get feeding schedules (optionally filtered by pet)
   getFeedingSchedulesByPetId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { petId } = req.params;
+      // Support both URL params (/pets/:petId/feeding-schedules) and query string (/feeding-schedules?petId=...)
+      const petId = req.params.petId || (req.query.petId as string);
       const params: FeedingScheduleQueryParams = {
         ...getPaginationParams(req.query),
         isActive: req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined,
         foodType: req.query.foodType as string,
       };
-
-      if (!petId) {
-        throw createError('Pet ID is required', 400, 'MISSING_PET_ID');
-      }
 
       const { schedules, total } = await this.feedingScheduleService.getFeedingSchedulesByPetId(petId, params);
       const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };

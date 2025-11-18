@@ -37,7 +37,16 @@ const updateHealthRecordSchema = createHealthRecordSchema.partial();
 // Routes
 router.get('/upcoming', healthRecordController.getUpcomingVaccinations);
 
-router.get('/', healthRecordController.getHealthRecordsByPetId);
+// GET / - If called as /api/health-records, use getAllHealthRecords (accepts petId as query param)
+// GET / - If called as /api/pets/:petId/health-records, use getHealthRecordsByPetId (gets petId from params)
+router.get('/', (req: any, res: any, next: any) => {
+  // Check if petId exists in params (nested route) or query (standalone route)
+  if (req.params.petId) {
+    return healthRecordController.getHealthRecordsByPetId(req, res, next);
+  } else {
+    return healthRecordController.getAllHealthRecords(req, res, next);
+  }
+});
 
 router.get('/:id', healthRecordController.getHealthRecordById);
 

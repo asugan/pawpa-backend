@@ -12,10 +12,10 @@ export class HealthRecordController {
     this.healthRecordService = new HealthRecordService();
   }
 
-  // GET /api/pets/:petId/health-records - Get health records for a pet
-  getHealthRecordsByPetId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // GET /api/health-records - Get all health records (with optional petId filter)
+  getAllHealthRecords = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { petId } = req.params;
+      const petId = req.query.petId as string | undefined;
       const params: HealthRecordQueryParams = {
         ...getPaginationParams(req.query),
         type: req.query.type as string,
@@ -23,9 +23,26 @@ export class HealthRecordController {
         endDate: req.query.endDate as string,
       };
 
-      if (!petId) {
-        throw createError('Pet ID is required', 400, 'MISSING_PET_ID');
-      }
+      // Get records (filtered by petId if provided, otherwise all records)
+      const { records, total } = await this.healthRecordService.getHealthRecordsByPetId(petId, params);
+      const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };
+      successResponse(res, records, 200, meta);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // GET /api/health-records OR /api/pets/:petId/health-records - Get health records (optionally filtered by pet)
+  getHealthRecordsByPetId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // Support both URL params (/pets/:petId/health-records) and query string (/health-records?petId=...)
+      const petId = req.params.petId || (req.query.petId as string);
+      const params: HealthRecordQueryParams = {
+        ...getPaginationParams(req.query),
+        type: req.query.type as string,
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
+      };
 
       const { records, total } = await this.healthRecordService.getHealthRecordsByPetId(petId, params);
       const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };

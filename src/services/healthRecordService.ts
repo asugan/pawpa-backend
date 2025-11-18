@@ -5,12 +5,17 @@ import { HealthRecord, NewHealthRecord } from '../models/schema';
 import { generateId } from '../utils/id';
 
 export class HealthRecordService {
-  async getHealthRecordsByPetId(petId: string, params: HealthRecordQueryParams): Promise<{ records: HealthRecord[]; total: number }> {
-    const { page = 1, limit = 10, type, startDate, endDate } = params;
+  async getHealthRecordsByPetId(petId?: string, params?: HealthRecordQueryParams): Promise<{ records: HealthRecord[]; total: number }> {
+    const { page = 1, limit = 10, type, startDate, endDate } = params || {};
     const offset = (page - 1) * limit;
 
     // Build where conditions
-    const conditions = [eq(healthRecords.petId, petId)];
+    const conditions = [];
+
+    // Only filter by petId if provided
+    if (petId) {
+      conditions.push(eq(healthRecords.petId, petId));
+    }
 
     if (type) {
       conditions.push(eq(healthRecords.type, type));
@@ -24,7 +29,7 @@ export class HealthRecordService {
       conditions.push(lte(healthRecords.date, new Date(endDate)));
     }
 
-    const whereClause = and(...conditions);
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count
     const result = await db

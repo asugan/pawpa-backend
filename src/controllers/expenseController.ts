@@ -12,10 +12,11 @@ export class ExpenseController {
     this.expenseService = new ExpenseService();
   }
 
-  // GET /api/pets/:petId/expenses - Get expenses for a pet
+  // GET /api/expenses OR /api/pets/:petId/expenses - Get expenses (optionally filtered by pet)
   getExpensesByPetId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { petId } = req.params;
+      // Support both URL params (/pets/:petId/expenses) and query string (/expenses?petId=...)
+      const petId = req.params.petId || (req.query.petId as string);
       const params: ExpenseQueryParams = {
         ...getPaginationParams(req.query),
         category: req.query.category as string,
@@ -26,10 +27,6 @@ export class ExpenseController {
         currency: req.query.currency as string,
         paymentMethod: req.query.paymentMethod as string,
       };
-
-      if (!petId) {
-        throw createError('Pet ID is required', 400, 'MISSING_PET_ID');
-      }
 
       const { expenses, total } = await this.expenseService.getExpensesByPetId(petId, params);
       const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };
