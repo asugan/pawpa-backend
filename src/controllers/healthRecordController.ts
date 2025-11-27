@@ -1,8 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+import { AuthenticatedRequest } from '../middleware/auth';
 import { HealthRecordService } from '../services/healthRecordService';
-import { successResponse, errorResponse, getPaginationParams } from '../utils/response';
+import { successResponse, getPaginationParams } from '../utils/response';
 import { CreateHealthRecordRequest, UpdateHealthRecordRequest, HealthRecordQueryParams } from '../types/api';
-import { HealthRecord } from '../models/schema';
 import { createError } from '../middleware/errorHandler';
 
 export class HealthRecordController {
@@ -12,9 +12,10 @@ export class HealthRecordController {
     this.healthRecordService = new HealthRecordService();
   }
 
-  // GET /api/health-records - Get all health records (with optional petId filter)
-  getAllHealthRecords = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // GET /api/health-records - Get all health records for authenticated user
+  getAllHealthRecords = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const petId = req.query.petId as string | undefined;
       const params: HealthRecordQueryParams = {
         ...getPaginationParams(req.query),
@@ -23,8 +24,7 @@ export class HealthRecordController {
         endDate: req.query.endDate as string,
       };
 
-      // Get records (filtered by petId if provided, otherwise all records)
-      const { records, total } = await this.healthRecordService.getHealthRecordsByPetId(petId, params);
+      const { records, total } = await this.healthRecordService.getHealthRecordsByPetId(userId, petId, params);
       const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };
       successResponse(res, records, 200, meta);
     } catch (error) {
@@ -32,10 +32,10 @@ export class HealthRecordController {
     }
   };
 
-  // GET /api/health-records OR /api/pets/:petId/health-records - Get health records (optionally filtered by pet)
-  getHealthRecordsByPetId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // GET /api/pets/:petId/health-records - Get health records for a specific pet
+  getHealthRecordsByPetId = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // Support both URL params (/pets/:petId/health-records) and query string (/health-records?petId=...)
+      const userId = req.user!.id;
       const petId = req.params.petId || (req.query.petId as string);
       const params: HealthRecordQueryParams = {
         ...getPaginationParams(req.query),
@@ -44,7 +44,7 @@ export class HealthRecordController {
         endDate: req.query.endDate as string,
       };
 
-      const { records, total } = await this.healthRecordService.getHealthRecordsByPetId(petId, params);
+      const { records, total } = await this.healthRecordService.getHealthRecordsByPetId(userId, petId, params);
       const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };
 
       successResponse(res, records, 200, meta);
@@ -54,15 +54,16 @@ export class HealthRecordController {
   };
 
   // GET /api/health-records/:id - Get health record by ID
-  getHealthRecordById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getHealthRecordById = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
 
       if (!id) {
         throw createError('Health record ID is required', 400, 'MISSING_ID');
       }
 
-      const record = await this.healthRecordService.getHealthRecordById(id);
+      const record = await this.healthRecordService.getHealthRecordById(userId, id);
 
       if (!record) {
         throw createError('Health record not found', 404, 'HEALTH_RECORD_NOT_FOUND');
@@ -75,8 +76,9 @@ export class HealthRecordController {
   };
 
   // POST /api/health-records - Create new health record
-  createHealthRecord = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  createHealthRecord = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const recordData: CreateHealthRecordRequest = req.body;
 
       // Validation
@@ -91,7 +93,7 @@ export class HealthRecordController {
         ...(recordData.nextDueDate && { nextDueDate: new Date(recordData.nextDueDate) })
       };
 
-      const record = await this.healthRecordService.createHealthRecord(convertedRecordData as any);
+      const record = await this.healthRecordService.createHealthRecord(userId, convertedRecordData as any);
       successResponse(res, record, 201);
     } catch (error) {
       next(error);
@@ -99,8 +101,9 @@ export class HealthRecordController {
   };
 
   // PUT /api/health-records/:id - Update health record
-  updateHealthRecord = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  updateHealthRecord = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
       const updates: UpdateHealthRecordRequest = req.body;
 
@@ -115,7 +118,7 @@ export class HealthRecordController {
         ...(updates.nextDueDate && { nextDueDate: new Date(updates.nextDueDate) })
       };
 
-      const record = await this.healthRecordService.updateHealthRecord(id, convertedUpdates as any);
+      const record = await this.healthRecordService.updateHealthRecord(userId, id, convertedUpdates as any);
 
       if (!record) {
         throw createError('Health record not found', 404, 'HEALTH_RECORD_NOT_FOUND');
@@ -128,15 +131,16 @@ export class HealthRecordController {
   };
 
   // DELETE /api/health-records/:id - Delete health record
-  deleteHealthRecord = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  deleteHealthRecord = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
 
       if (!id) {
         throw createError('Health record ID is required', 400, 'MISSING_ID');
       }
 
-      const deleted = await this.healthRecordService.deleteHealthRecord(id);
+      const deleted = await this.healthRecordService.deleteHealthRecord(userId, id);
 
       if (!deleted) {
         throw createError('Health record not found', 404, 'HEALTH_RECORD_NOT_FOUND');
@@ -149,10 +153,11 @@ export class HealthRecordController {
   };
 
   // GET /api/health-records/upcoming - Get upcoming vaccinations
-  getUpcomingVaccinations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getUpcomingVaccinations = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const vaccinations = await this.healthRecordService.getUpcomingVaccinations(petId);
+      const vaccinations = await this.healthRecordService.getUpcomingVaccinations(userId, petId);
       successResponse(res, vaccinations);
     } catch (error) {
       next(error);

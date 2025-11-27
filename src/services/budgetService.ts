@@ -13,12 +13,18 @@ export interface BudgetAlert {
 }
 
 export class BudgetService {
-  async getBudgetLimitsByPetId(petId: string, params: BudgetQueryParams): Promise<{ budgetLimits: BudgetLimit[]; total: number }> {
+  /**
+   * Get budget limits for a user, optionally filtered by petId
+   */
+  async getBudgetLimitsByPetId(userId: string, petId: string, params: BudgetQueryParams): Promise<{ budgetLimits: BudgetLimit[]; total: number }> {
     const { page = 1, limit = 10, period, isActive, category } = params;
     const offset = (page - 1) * limit;
 
-    // Build where conditions
-    const conditions = [eq(budgetLimits.petId, petId)];
+    // Build where conditions - always filter by userId
+    const conditions = [
+      eq(budgetLimits.userId, userId),
+      eq(budgetLimits.petId, petId)
+    ];
 
     if (isActive !== undefined) {
       conditions.push(eq(budgetLimits.isActive, isActive));
@@ -57,24 +63,35 @@ export class BudgetService {
     };
   }
 
-  async getBudgetLimitById(id: string): Promise<BudgetLimit | null> {
+  /**
+   * Get budget limit by ID, ensuring it belongs to the user
+   */
+  async getBudgetLimitById(userId: string, id: string): Promise<BudgetLimit | null> {
     const [budgetLimit] = await db
       .select()
       .from(budgetLimits)
-      .where(eq(budgetLimits.id, id));
+      .where(and(eq(budgetLimits.id, id), eq(budgetLimits.userId, userId)));
 
     return budgetLimit || null;
   }
 
-  async createBudgetLimit(budgetData: Omit<NewBudgetLimit, 'id' | 'createdAt'>): Promise<BudgetLimit> {
-    // Verify pet exists
-    const [pet] = await db.select().from(pets).where(eq(pets.id, budgetData.petId));
+  /**
+   * Create budget limit, ensuring the pet belongs to the user
+   */
+  async createBudgetLimit(userId: string, budgetData: Omit<NewBudgetLimit, 'id' | 'userId' | 'createdAt'>): Promise<BudgetLimit> {
+    // Verify pet exists and belongs to user
+    const [pet] = await db
+      .select()
+      .from(pets)
+      .where(and(eq(pets.id, budgetData.petId), eq(pets.userId, userId)));
+
     if (!pet) {
       throw new Error('Pet not found');
     }
 
     const newBudgetLimit: NewBudgetLimit = {
       id: generateId(),
+      userId,
       ...budgetData,
       createdAt: new Date(),
     };
@@ -91,27 +108,42 @@ export class BudgetService {
     return createdBudgetLimit;
   }
 
-  async updateBudgetLimit(id: string, updates: Partial<NewBudgetLimit>): Promise<BudgetLimit | null> {
+  /**
+   * Update budget limit, ensuring it belongs to the user
+   */
+  async updateBudgetLimit(userId: string, id: string, updates: Partial<NewBudgetLimit>): Promise<BudgetLimit | null> {
+    // Don't allow updating userId
+    const { userId: _, ...safeUpdates } = updates as any;
+
     const [updatedBudgetLimit] = await db
       .update(budgetLimits)
-      .set(updates)
-      .where(eq(budgetLimits.id, id))
+      .set(safeUpdates)
+      .where(and(eq(budgetLimits.id, id), eq(budgetLimits.userId, userId)))
       .returning();
 
     return updatedBudgetLimit || null;
   }
 
-  async deleteBudgetLimit(id: string): Promise<boolean> {
+  /**
+   * Delete budget limit, ensuring it belongs to the user
+   */
+  async deleteBudgetLimit(userId: string, id: string): Promise<boolean> {
     const [deletedBudgetLimit] = await db
       .delete(budgetLimits)
-      .where(eq(budgetLimits.id, id))
+      .where(and(eq(budgetLimits.id, id), eq(budgetLimits.userId, userId)))
       .returning();
 
     return !!deletedBudgetLimit;
   }
 
-  async getActiveBudgetLimits(petId?: string): Promise<BudgetLimit[]> {
-    const conditions = [eq(budgetLimits.isActive, true)];
+  /**
+   * Get active budget limits for a user
+   */
+  async getActiveBudgetLimits(userId: string, petId?: string): Promise<BudgetLimit[]> {
+    const conditions = [
+      eq(budgetLimits.userId, userId),
+      eq(budgetLimits.isActive, true)
+    ];
 
     if (petId) {
       conditions.push(eq(budgetLimits.petId, petId));
@@ -124,8 +156,11 @@ export class BudgetService {
       .orderBy(desc(budgetLimits.createdAt));
   }
 
-  async checkBudgetAlerts(petId?: string): Promise<BudgetAlert[]> {
-    const activeBudgets = await this.getActiveBudgetLimits(petId);
+  /**
+   * Check budget alerts for a user
+   */
+  async checkBudgetAlerts(userId: string, petId?: string): Promise<BudgetAlert[]> {
+    const activeBudgets = await this.getActiveBudgetLimits(userId, petId);
     const alerts: BudgetAlert[] = [];
 
     const now = new Date();
@@ -182,13 +217,16 @@ export class BudgetService {
     return alerts;
   }
 
-  async getBudgetStatus(budgetLimitId: string): Promise<{
+  /**
+   * Get budget status for a specific budget limit
+   */
+  async getBudgetStatus(userId: string, budgetLimitId: string): Promise<{
     budgetLimit: BudgetLimit;
     currentSpending: number;
     percentage: number;
     remainingAmount: number;
   } | null> {
-    const budget = await this.getBudgetLimitById(budgetLimitId);
+    const budget = await this.getBudgetLimitById(userId, budgetLimitId);
     if (!budget) {
       return null;
     }
@@ -237,13 +275,16 @@ export class BudgetService {
     };
   }
 
-  async getAllBudgetStatuses(petId?: string): Promise<Array<{
+  /**
+   * Get all budget statuses for a user
+   */
+  async getAllBudgetStatuses(userId: string, petId?: string): Promise<Array<{
     budgetLimit: BudgetLimit;
     currentSpending: number;
     percentage: number;
     remainingAmount: number;
   }>> {
-    const activeBudgets = await this.getActiveBudgetLimits(petId);
+    const activeBudgets = await this.getActiveBudgetLimits(userId, petId);
     const statuses = [];
 
     const now = new Date();

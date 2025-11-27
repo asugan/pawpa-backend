@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireAuth } from '../middleware/auth';
 import petRoutes from './petRoutes';
 import healthRecordRoutes from './healthRecordRoutes';
 import eventRoutes from './eventRoutes';
@@ -7,6 +8,9 @@ import expenseRoutes from './expenseRoutes';
 import budgetRoutes from './budgetRoutes';
 
 const router = Router();
+
+// All API routes require authentication
+router.use(requireAuth);
 
 // Mount routes
 router.use('/pets', petRoutes);

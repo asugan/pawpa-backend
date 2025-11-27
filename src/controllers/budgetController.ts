@@ -1,4 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+import { AuthenticatedRequest } from '../middleware/auth';
 import { BudgetService } from '../services/budgetService';
 import { successResponse, errorResponse, getPaginationParams } from '../utils/response';
 import { CreateBudgetLimitRequest, UpdateBudgetLimitRequest, BudgetQueryParams } from '../types/api';
@@ -13,8 +14,9 @@ export class BudgetController {
   }
 
   // GET /api/pets/:petId/budget-limits - Get budget limits for a pet
-  getBudgetLimitsByPetId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getBudgetLimitsByPetId = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { petId } = req.params;
       const params: BudgetQueryParams = {
         ...getPaginationParams(req.query),
@@ -27,7 +29,7 @@ export class BudgetController {
         throw createError('Pet ID is required', 400, 'MISSING_PET_ID');
       }
 
-      const { budgetLimits, total } = await this.budgetService.getBudgetLimitsByPetId(petId, params);
+      const { budgetLimits, total } = await this.budgetService.getBudgetLimitsByPetId(userId, petId, params);
       const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };
 
       successResponse(res, budgetLimits, 200, meta);
@@ -37,15 +39,16 @@ export class BudgetController {
   };
 
   // GET /api/budget-limits/:id - Get budget limit by ID
-  getBudgetLimitById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getBudgetLimitById = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
 
       if (!id) {
         throw createError('Budget limit ID is required', 400, 'MISSING_ID');
       }
 
-      const budgetLimit = await this.budgetService.getBudgetLimitById(id);
+      const budgetLimit = await this.budgetService.getBudgetLimitById(userId, id);
 
       if (!budgetLimit) {
         throw createError('Budget limit not found', 404, 'BUDGET_LIMIT_NOT_FOUND');
@@ -58,8 +61,9 @@ export class BudgetController {
   };
 
   // POST /api/budget-limits - Create new budget limit
-  createBudgetLimit = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  createBudgetLimit = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const budgetData: CreateBudgetLimitRequest = req.body;
 
       // Validation
@@ -71,7 +75,7 @@ export class BudgetController {
         throw createError('Period must be either "monthly" or "yearly"', 400, 'INVALID_PERIOD');
       }
 
-      const budgetLimit = await this.budgetService.createBudgetLimit(budgetData);
+      const budgetLimit = await this.budgetService.createBudgetLimit(userId, budgetData);
       successResponse(res, budgetLimit, 201);
     } catch (error) {
       next(error);
@@ -79,8 +83,9 @@ export class BudgetController {
   };
 
   // PUT /api/budget-limits/:id - Update budget limit
-  updateBudgetLimit = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  updateBudgetLimit = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
       const updates: UpdateBudgetLimitRequest = req.body;
 
@@ -92,7 +97,7 @@ export class BudgetController {
         throw createError('Period must be either "monthly" or "yearly"', 400, 'INVALID_PERIOD');
       }
 
-      const budgetLimit = await this.budgetService.updateBudgetLimit(id, updates);
+      const budgetLimit = await this.budgetService.updateBudgetLimit(userId, id, updates);
 
       if (!budgetLimit) {
         throw createError('Budget limit not found', 404, 'BUDGET_LIMIT_NOT_FOUND');
@@ -105,15 +110,16 @@ export class BudgetController {
   };
 
   // DELETE /api/budget-limits/:id - Delete budget limit
-  deleteBudgetLimit = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  deleteBudgetLimit = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
 
       if (!id) {
         throw createError('Budget limit ID is required', 400, 'MISSING_ID');
       }
 
-      const deleted = await this.budgetService.deleteBudgetLimit(id);
+      const deleted = await this.budgetService.deleteBudgetLimit(userId, id);
 
       if (!deleted) {
         throw createError('Budget limit not found', 404, 'BUDGET_LIMIT_NOT_FOUND');
@@ -126,10 +132,11 @@ export class BudgetController {
   };
 
   // GET /api/budget-limits/active - Get all active budget limits
-  getActiveBudgetLimits = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getActiveBudgetLimits = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const budgetLimits = await this.budgetService.getActiveBudgetLimits(petId);
+      const budgetLimits = await this.budgetService.getActiveBudgetLimits(userId, petId);
       successResponse(res, budgetLimits);
     } catch (error) {
       next(error);
@@ -137,10 +144,11 @@ export class BudgetController {
   };
 
   // GET /api/budget-limits/alerts - Check budget alerts
-  checkBudgetAlerts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  checkBudgetAlerts = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const alerts = await this.budgetService.checkBudgetAlerts(petId);
+      const alerts = await this.budgetService.checkBudgetAlerts(userId, petId);
       successResponse(res, alerts);
     } catch (error) {
       next(error);
@@ -148,15 +156,16 @@ export class BudgetController {
   };
 
   // GET /api/budget-limits/:id/status - Get budget status
-  getBudgetStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getBudgetStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
 
       if (!id) {
         throw createError('Budget limit ID is required', 400, 'MISSING_ID');
       }
 
-      const status = await this.budgetService.getBudgetStatus(id);
+      const status = await this.budgetService.getBudgetStatus(userId, id);
 
       if (!status) {
         throw createError('Budget limit not found', 404, 'BUDGET_LIMIT_NOT_FOUND');
@@ -169,10 +178,11 @@ export class BudgetController {
   };
 
   // GET /api/budget-limits/statuses - Get all budget statuses
-  getAllBudgetStatuses = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getAllBudgetStatuses = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const statuses = await this.budgetService.getAllBudgetStatuses(petId);
+      const statuses = await this.budgetService.getAllBudgetStatuses(userId, petId);
       successResponse(res, statuses);
     } catch (error) {
       next(error);

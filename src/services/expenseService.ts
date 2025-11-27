@@ -5,12 +5,12 @@ import { Expense, NewExpense } from '../models/schema';
 import { generateId } from '../utils/id';
 
 export class ExpenseService {
-  async getExpensesByPetId(petId?: string, params?: ExpenseQueryParams): Promise<{ expenses: Expense[]; total: number }> {
+  async getExpensesByPetId(userId: string, petId?: string, params?: ExpenseQueryParams): Promise<{ expenses: Expense[]; total: number }> {
     const { page = 1, limit = 10, category, startDate, endDate, minAmount, maxAmount, currency, paymentMethod } = params || {};
     const offset = (page - 1) * limit;
 
-    // Build where conditions
-    const conditions = [];
+    // Build where conditions - always filter by userId
+    const conditions = [eq(expenses.userId, userId)];
 
     // Only filter by petId if provided
     if (petId) {
@@ -70,24 +70,29 @@ export class ExpenseService {
     };
   }
 
-  async getExpenseById(id: string): Promise<Expense | null> {
+  async getExpenseById(userId: string, id: string): Promise<Expense | null> {
     const [expense] = await db
       .select()
       .from(expenses)
-      .where(eq(expenses.id, id));
+      .where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
 
     return expense || null;
   }
 
-  async createExpense(expenseData: Omit<NewExpense, 'id' | 'createdAt'>): Promise<Expense> {
-    // Verify pet exists
-    const [pet] = await db.select().from(pets).where(eq(pets.id, expenseData.petId));
+  async createExpense(userId: string, expenseData: Omit<NewExpense, 'id' | 'userId' | 'createdAt'>): Promise<Expense> {
+    // Verify pet exists and belongs to user
+    const [pet] = await db
+      .select()
+      .from(pets)
+      .where(and(eq(pets.id, expenseData.petId), eq(pets.userId, userId)));
+
     if (!pet) {
       throw new Error('Pet not found');
     }
 
     const newExpense: NewExpense = {
       id: generateId(),
+      userId,
       ...expenseData,
       createdAt: new Date(),
     };
@@ -104,27 +109,31 @@ export class ExpenseService {
     return createdExpense;
   }
 
-  async updateExpense(id: string, updates: Partial<NewExpense>): Promise<Expense | null> {
+  async updateExpense(userId: string, id: string, updates: Partial<NewExpense>): Promise<Expense | null> {
+    // Don't allow updating userId
+    const { userId: _, ...safeUpdates } = updates as any;
+
     const [updatedExpense] = await db
       .update(expenses)
-      .set(updates)
-      .where(eq(expenses.id, id))
+      .set(safeUpdates)
+      .where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
       .returning();
 
     return updatedExpense || null;
   }
 
-  async deleteExpense(id: string): Promise<boolean> {
+  async deleteExpense(userId: string, id: string): Promise<boolean> {
     const [deletedExpense] = await db
       .delete(expenses)
-      .where(eq(expenses.id, id))
+      .where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
       .returning();
 
     return !!deletedExpense;
   }
 
-  async getExpensesByDateRange(petId: string | undefined, startDate: Date, endDate: Date): Promise<Expense[]> {
+  async getExpensesByDateRange(userId: string, petId: string | undefined, startDate: Date, endDate: Date): Promise<Expense[]> {
     const conditions = [
+      eq(expenses.userId, userId),
       between(expenses.date, startDate, endDate)
     ];
 
@@ -139,14 +148,14 @@ export class ExpenseService {
       .orderBy(desc(expenses.date));
   }
 
-  async getExpenseStats(petId?: string, startDate?: Date, endDate?: Date, category?: string): Promise<{
+  async getExpenseStats(userId: string, petId?: string, startDate?: Date, endDate?: Date, category?: string): Promise<{
     total: number;
     count: number;
     average: number;
     byCategory: { category: string; total: number; count: number }[];
     byCurrency: { currency: string; total: number }[];
   }> {
-    const conditions = [];
+    const conditions = [eq(expenses.userId, userId)];
 
     if (petId) {
       conditions.push(eq(expenses.petId, petId));
@@ -216,7 +225,7 @@ export class ExpenseService {
     };
   }
 
-  async getMonthlyExpenses(petId?: string, year?: number, month?: number): Promise<Expense[]> {
+  async getMonthlyExpenses(userId: string, petId?: string, year?: number, month?: number): Promise<Expense[]> {
     const now = new Date();
     const targetYear = year || now.getFullYear();
     const targetMonth = month !== undefined ? month : now.getMonth();
@@ -224,21 +233,24 @@ export class ExpenseService {
     const startDate = new Date(targetYear, targetMonth, 1);
     const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
 
-    return this.getExpensesByDateRange(petId, startDate, endDate);
+    return this.getExpensesByDateRange(userId, petId, startDate, endDate);
   }
 
-  async getYearlyExpenses(petId?: string, year?: number): Promise<Expense[]> {
+  async getYearlyExpenses(userId: string, petId?: string, year?: number): Promise<Expense[]> {
     const now = new Date();
     const targetYear = year || now.getFullYear();
 
     const startDate = new Date(targetYear, 0, 1);
     const endDate = new Date(targetYear, 11, 31, 23, 59, 59, 999);
 
-    return this.getExpensesByDateRange(petId, startDate, endDate);
+    return this.getExpensesByDateRange(userId, petId, startDate, endDate);
   }
 
-  async getExpensesByCategory(category: string, petId?: string): Promise<Expense[]> {
-    const conditions = [eq(expenses.category, category)];
+  async getExpensesByCategory(userId: string, category: string, petId?: string): Promise<Expense[]> {
+    const conditions = [
+      eq(expenses.userId, userId),
+      eq(expenses.category, category)
+    ];
 
     if (petId) {
       conditions.push(eq(expenses.petId, petId));
@@ -251,8 +263,8 @@ export class ExpenseService {
       .orderBy(desc(expenses.date));
   }
 
-  async exportExpensesCSV(petId?: string, startDate?: Date, endDate?: Date): Promise<string> {
-    const conditions = [];
+  async exportExpensesCSV(userId: string, petId?: string, startDate?: Date, endDate?: Date): Promise<string> {
+    const conditions = [eq(expenses.userId, userId)];
 
     if (petId) {
       conditions.push(eq(expenses.petId, petId));

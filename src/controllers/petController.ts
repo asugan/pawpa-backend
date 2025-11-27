@@ -1,8 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+import { AuthenticatedRequest } from '../middleware/auth';
 import { PetService } from '../services/petService';
 import { HealthRecordService } from '../services/healthRecordService';
-import { successResponse, errorResponse, getPaginationParams } from '../utils/response';
-import { CreatePetRequest, UpdatePetRequest, PetQueryParams, Pet } from '../types/api';
+import { successResponse } from '../utils/response';
+import { CreatePetRequest, UpdatePetRequest, PetQueryParams } from '../types/api';
 import { createError } from '../middleware/errorHandler';
 
 export class PetController {
@@ -14,17 +15,19 @@ export class PetController {
     this.healthRecordService = new HealthRecordService();
   }
 
-  // GET /api/pets - Get all pets
-  getAllPets = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // GET /api/pets - Get all pets for authenticated user
+  getAllPets = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const params: PetQueryParams = {
-        ...getPaginationParams(req.query),
+        page: parseInt(req.query.page as string) || 1,
+        limit: Math.min(parseInt(req.query.limit as string) || 10, 100),
         type: req.query.type as string,
         breed: req.query.breed as string,
         gender: req.query.gender as string,
       };
 
-      const { pets, total } = await this.petService.getAllPets(params);
+      const { pets, total } = await this.petService.getAllPets(userId, params);
       const page = params.page || 1;
       const limit = params.limit || 10;
       const meta = { total, page, limit, totalPages: Math.ceil(total / limit) };
@@ -36,15 +39,16 @@ export class PetController {
   };
 
   // GET /api/pets/:id - Get pet by ID
-  getPetById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getPetById = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
 
       if (!id) {
         throw createError('Pet ID is required', 400, 'MISSING_ID');
       }
 
-      const pet = await this.petService.getPetById(id);
+      const pet = await this.petService.getPetById(userId, id);
 
       if (!pet) {
         throw createError('Pet not found', 404, 'PET_NOT_FOUND');
@@ -57,8 +61,9 @@ export class PetController {
   };
 
   // POST /api/pets - Create new pet
-  createPet = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  createPet = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const petData: CreatePetRequest = req.body;
 
       // Validation
@@ -72,7 +77,7 @@ export class PetController {
         ...(petData.birthDate && { birthDate: new Date(petData.birthDate) })
       };
 
-      const pet = await this.petService.createPet(convertedPetData as any);
+      const pet = await this.petService.createPet(userId, convertedPetData as any);
       successResponse(res, pet, 201);
     } catch (error) {
       next(error);
@@ -80,8 +85,9 @@ export class PetController {
   };
 
   // PUT /api/pets/:id - Update pet
-  updatePet = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  updatePet = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
       const updates: UpdatePetRequest = req.body;
 
@@ -95,7 +101,7 @@ export class PetController {
         ...(updates.birthDate && { birthDate: new Date(updates.birthDate) })
       };
 
-      const pet = await this.petService.updatePet(id, convertedUpdates as any);
+      const pet = await this.petService.updatePet(userId, id, convertedUpdates as any);
 
       if (!pet) {
         throw createError('Pet not found', 404, 'PET_NOT_FOUND');
@@ -108,15 +114,16 @@ export class PetController {
   };
 
   // DELETE /api/pets/:id - Delete pet
-  deletePet = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  deletePet = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
 
       if (!id) {
         throw createError('Pet ID is required', 400, 'MISSING_ID');
       }
 
-      const deleted = await this.petService.deletePet(id);
+      const deleted = await this.petService.deletePet(userId, id);
 
       if (!deleted) {
         throw createError('Pet not found', 404, 'PET_NOT_FOUND');
@@ -129,8 +136,9 @@ export class PetController {
   };
 
   // POST /api/pets/:id/photo - Update pet photo
-  updatePetPhoto = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  updatePetPhoto = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
       const { photoUrl } = req.body;
 
@@ -142,7 +150,7 @@ export class PetController {
         throw createError('Photo URL is required', 400, 'MISSING_PHOTO_URL');
       }
 
-      const pet = await this.petService.updatePetPhoto(id, photoUrl);
+      const pet = await this.petService.updatePetPhoto(userId, id, photoUrl);
 
       if (!pet) {
         throw createError('Pet not found', 404, 'PET_NOT_FOUND');
@@ -155,24 +163,31 @@ export class PetController {
   };
 
   // GET /api/pets/:id/health-records - Get pet's health records
-  getPetHealthRecords = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getPetHealthRecords = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
 
       if (!id) {
         throw createError('Pet ID is required', 400, 'MISSING_ID');
       }
 
+      // First verify the pet belongs to the user
+      const pet = await this.petService.getPetById(userId, id);
+      if (!pet) {
+        throw createError('Pet not found', 404, 'PET_NOT_FOUND');
+      }
+
       // Optional query parameters for filtering
       const params = {
         page: parseInt(req.query.page as string) || 1,
-        limit: parseInt(req.query.limit as string) || 50, // Get more records for mobile app
+        limit: parseInt(req.query.limit as string) || 50,
         type: req.query.type as string,
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
       };
 
-      const healthRecords = await this.healthRecordService.getHealthRecordsByPetId(id, params);
+      const healthRecords = await this.healthRecordService.getHealthRecordsByPetId(userId, id, params);
 
       successResponse(res, healthRecords.records);
     } catch (error) {

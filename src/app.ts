@@ -1,5 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
+import { toNodeHandler } from 'better-auth/node';
+import { auth } from './lib/auth';
 import { corsMiddleware } from './middleware/cors';
 import { requestLogger } from './middleware/requestLogger';
 import { rateLimiter } from './middleware/rateLimiter';
@@ -16,6 +18,10 @@ app.use(corsMiddleware);
 
 // Rate limiting
 app.use(rateLimiter);
+
+// Better Auth handler - MUST come before express.json()
+// Express v5 requires named wildcard: *splat instead of just *
+app.all('/api/auth/*splat', toNodeHandler(auth));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -45,10 +51,13 @@ app.get('/api', (req, res) => {
       message: 'PawPa Backend API is running',
       version: 'v1',
       endpoints: {
+        auth: '/api/auth/*',
         pets: '/api/pets',
         healthRecords: '/api/health-records',
         events: '/api/events',
         feedingSchedules: '/api/feeding-schedules',
+        expenses: '/api/expenses',
+        budgetLimits: '/api/budget-limits',
       },
     },
   });

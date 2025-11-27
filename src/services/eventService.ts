@@ -1,18 +1,20 @@
-import { eq, like, and, desc, count, gte, lte } from 'drizzle-orm';
+import { eq, and, count, gte, lte } from 'drizzle-orm';
 import { db, events, pets } from '../config/database';
 import { EventQueryParams } from '../types/api';
 import { Event, NewEvent } from '../models/schema';
 import { generateId } from '../utils/id';
 
 export class EventService {
-  async getEventsByPetId(petId?: string, params?: EventQueryParams): Promise<{ events: Event[]; total: number }> {
+  /**
+   * Get events for a user, optionally filtered by petId
+   */
+  async getEventsByPetId(userId: string, petId?: string, params?: EventQueryParams): Promise<{ events: Event[]; total: number }> {
     const { page = 1, limit = 10, type, startDate, endDate } = params || {};
     const offset = (page - 1) * limit;
 
-    // Build where conditions
-    const conditions = [];
+    // Build where conditions - always filter by userId
+    const conditions = [eq(events.userId, userId)];
 
-    // Only filter by petId if provided
     if (petId) {
       conditions.push(eq(events.petId, petId));
     }
@@ -29,7 +31,7 @@ export class EventService {
       conditions.push(lte(events.startTime, new Date(endDate)));
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = and(...conditions);
 
     // Get total count
     const result = await db
@@ -54,7 +56,10 @@ export class EventService {
     };
   }
 
-  async getEventsByDate(date: string, params: EventQueryParams): Promise<{ events: Event[]; total: number }> {
+  /**
+   * Get events for a specific date for a user
+   */
+  async getEventsByDate(userId: string, date: string, params: EventQueryParams): Promise<{ events: Event[]; total: number }> {
     const { page = 1, limit = 10, type } = params;
     const offset = (page - 1) * limit;
     const targetDate = new Date(date);
@@ -63,6 +68,7 @@ export class EventService {
 
     // Build where conditions
     const conditions = [
+      eq(events.userId, userId),
       gte(events.startTime, targetDate),
       lte(events.startTime, nextDay),
     ];
@@ -96,36 +102,35 @@ export class EventService {
     };
   }
 
-  async getEventById(id: string): Promise<Event | null> {
+  /**
+   * Get event by ID, ensuring it belongs to the user
+   */
+  async getEventById(userId: string, id: string): Promise<Event | null> {
     const [event] = await db
-      .select({
-        id: events.id,
-        petId: events.petId,
-        title: events.title,
-        description: events.description,
-        type: events.type,
-        startTime: events.startTime,
-        endTime: events.endTime,
-        location: events.location,
-        notes: events.notes,
-        reminder: events.reminder,
-        createdAt: events.createdAt,
-      })
+      .select()
       .from(events)
-      .where(eq(events.id, id));
+      .where(and(eq(events.id, id), eq(events.userId, userId)));
 
     return event || null;
   }
 
-  async createEvent(eventData: Omit<NewEvent, 'id' | 'createdAt'>): Promise<Event> {
-    // Verify pet exists
-    const [pet] = await db.select().from(pets).where(eq(pets.id, eventData.petId));
+  /**
+   * Create event, ensuring the pet belongs to the user
+   */
+  async createEvent(userId: string, eventData: Omit<NewEvent, 'id' | 'userId' | 'createdAt'>): Promise<Event> {
+    // Verify pet exists and belongs to user
+    const [pet] = await db
+      .select()
+      .from(pets)
+      .where(and(eq(pets.id, eventData.petId), eq(pets.userId, userId)));
+
     if (!pet) {
       throw new Error('Pet not found');
     }
 
     const newEvent: NewEvent = {
       id: generateId(),
+      userId,
       ...eventData,
       createdAt: new Date(),
     };
@@ -142,31 +147,47 @@ export class EventService {
     return createdEvent;
   }
 
-  async updateEvent(id: string, updates: Partial<NewEvent>): Promise<Event | null> {
+  /**
+   * Update event, ensuring it belongs to the user
+   */
+  async updateEvent(userId: string, id: string, updates: Partial<NewEvent>): Promise<Event | null> {
+    // Don't allow updating userId
+    const { userId: _, ...safeUpdates } = updates as any;
+
     const [updatedEvent] = await db
       .update(events)
-      .set(updates)
-      .where(eq(events.id, id))
+      .set(safeUpdates)
+      .where(and(eq(events.id, id), eq(events.userId, userId)))
       .returning();
 
     return updatedEvent || null;
   }
 
-  async deleteEvent(id: string): Promise<boolean> {
+  /**
+   * Delete event, ensuring it belongs to the user
+   */
+  async deleteEvent(userId: string, id: string): Promise<boolean> {
     const [deletedEvent] = await db
       .delete(events)
-      .where(eq(events.id, id))
+      .where(and(eq(events.id, id), eq(events.userId, userId)))
       .returning();
 
     return !!deletedEvent;
   }
 
-  async getUpcomingEvents(petId?: string, days: number = 7): Promise<Event[]> {
+  /**
+   * Get upcoming events for a user
+   */
+  async getUpcomingEvents(userId: string, petId?: string, days: number = 7): Promise<Event[]> {
     const now = new Date();
     const futureDate = new Date(now);
     futureDate.setDate(futureDate.getDate() + days);
 
-    const conditions = [gte(events.startTime, now), lte(events.startTime, futureDate)];
+    const conditions = [
+      eq(events.userId, userId),
+      gte(events.startTime, now),
+      lte(events.startTime, futureDate)
+    ];
 
     if (petId) {
       conditions.push(eq(events.petId, petId));
@@ -179,13 +200,17 @@ export class EventService {
       .orderBy(events.startTime);
   }
 
-  async getTodayEvents(petId?: string): Promise<Event[]> {
+  /**
+   * Get today's events for a user
+   */
+  async getTodayEvents(userId: string, petId?: string): Promise<Event[]> {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const conditions = [
+      eq(events.userId, userId),
       gte(events.startTime, today),
       lte(events.startTime, tomorrow),
     ];

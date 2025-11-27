@@ -1,18 +1,20 @@
-import { eq, like, and, desc, count, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, count, gte, lte } from 'drizzle-orm';
 import { db, healthRecords, pets } from '../config/database';
 import { HealthRecordQueryParams } from '../types/api';
 import { HealthRecord, NewHealthRecord } from '../models/schema';
 import { generateId } from '../utils/id';
 
 export class HealthRecordService {
-  async getHealthRecordsByPetId(petId?: string, params?: HealthRecordQueryParams): Promise<{ records: HealthRecord[]; total: number }> {
+  /**
+   * Get health records for a user, optionally filtered by petId
+   */
+  async getHealthRecordsByPetId(userId: string, petId?: string, params?: HealthRecordQueryParams): Promise<{ records: HealthRecord[]; total: number }> {
     const { page = 1, limit = 10, type, startDate, endDate } = params || {};
     const offset = (page - 1) * limit;
 
-    // Build where conditions
-    const conditions = [];
+    // Build where conditions - always filter by userId
+    const conditions = [eq(healthRecords.userId, userId)];
 
-    // Only filter by petId if provided
     if (petId) {
       conditions.push(eq(healthRecords.petId, petId));
     }
@@ -29,7 +31,7 @@ export class HealthRecordService {
       conditions.push(lte(healthRecords.date, new Date(endDate)));
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = and(...conditions);
 
     // Get total count
     const result = await db
@@ -54,40 +56,35 @@ export class HealthRecordService {
     };
   }
 
-  async getHealthRecordById(id: string): Promise<HealthRecord | null> {
+  /**
+   * Get health record by ID, ensuring it belongs to the user
+   */
+  async getHealthRecordById(userId: string, id: string): Promise<HealthRecord | null> {
     const [record] = await db
-      .select({
-        id: healthRecords.id,
-        petId: healthRecords.petId,
-        type: healthRecords.type,
-        title: healthRecords.title,
-        description: healthRecords.description,
-        date: healthRecords.date,
-        veterinarian: healthRecords.veterinarian,
-        clinic: healthRecords.clinic,
-        cost: healthRecords.cost,
-        nextDueDate: healthRecords.nextDueDate,
-        attachments: healthRecords.attachments,
-        vaccineName: healthRecords.vaccineName,
-        vaccineManufacturer: healthRecords.vaccineManufacturer,
-        batchNumber: healthRecords.batchNumber,
-        createdAt: healthRecords.createdAt,
-      })
+      .select()
       .from(healthRecords)
-      .where(eq(healthRecords.id, id));
+      .where(and(eq(healthRecords.id, id), eq(healthRecords.userId, userId)));
 
     return record || null;
   }
 
-  async createHealthRecord(recordData: Omit<NewHealthRecord, 'id' | 'createdAt'>): Promise<HealthRecord> {
-    // Verify pet exists
-    const [pet] = await db.select().from(pets).where(eq(pets.id, recordData.petId));
+  /**
+   * Create health record, ensuring the pet belongs to the user
+   */
+  async createHealthRecord(userId: string, recordData: Omit<NewHealthRecord, 'id' | 'userId' | 'createdAt'>): Promise<HealthRecord> {
+    // Verify pet exists and belongs to user
+    const [pet] = await db
+      .select()
+      .from(pets)
+      .where(and(eq(pets.id, recordData.petId), eq(pets.userId, userId)));
+
     if (!pet) {
       throw new Error('Pet not found');
     }
 
     const newRecord: NewHealthRecord = {
       id: generateId(),
+      userId,
       ...recordData,
       createdAt: new Date(),
     };
@@ -104,28 +101,44 @@ export class HealthRecordService {
     return createdRecord;
   }
 
-  async updateHealthRecord(id: string, updates: Partial<NewHealthRecord>): Promise<HealthRecord | null> {
+  /**
+   * Update health record, ensuring it belongs to the user
+   */
+  async updateHealthRecord(userId: string, id: string, updates: Partial<NewHealthRecord>): Promise<HealthRecord | null> {
+    // Don't allow updating userId
+    const { userId: _, ...safeUpdates } = updates as any;
+
     const [updatedRecord] = await db
       .update(healthRecords)
-      .set(updates)
-      .where(eq(healthRecords.id, id))
+      .set(safeUpdates)
+      .where(and(eq(healthRecords.id, id), eq(healthRecords.userId, userId)))
       .returning();
 
     return updatedRecord || null;
   }
 
-  async deleteHealthRecord(id: string): Promise<boolean> {
+  /**
+   * Delete health record, ensuring it belongs to the user
+   */
+  async deleteHealthRecord(userId: string, id: string): Promise<boolean> {
     const [deletedRecord] = await db
       .delete(healthRecords)
-      .where(eq(healthRecords.id, id))
+      .where(and(eq(healthRecords.id, id), eq(healthRecords.userId, userId)))
       .returning();
 
     return !!deletedRecord;
   }
 
-  async getUpcomingVaccinations(petId?: string): Promise<HealthRecord[]> {
+  /**
+   * Get upcoming vaccinations for a user
+   */
+  async getUpcomingVaccinations(userId: string, petId?: string): Promise<HealthRecord[]> {
     const now = new Date();
-    const conditions = [eq(healthRecords.type, 'vaccination'), gte(healthRecords.nextDueDate, now)];
+    const conditions = [
+      eq(healthRecords.userId, userId),
+      eq(healthRecords.type, 'vaccination'),
+      gte(healthRecords.nextDueDate, now)
+    ];
 
     if (petId) {
       conditions.push(eq(healthRecords.petId, petId));

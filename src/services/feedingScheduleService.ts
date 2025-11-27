@@ -5,12 +5,15 @@ import { FeedingSchedule, NewFeedingSchedule } from '../models/schema';
 import { generateId } from '../utils/id';
 
 export class FeedingScheduleService {
-  async getFeedingSchedulesByPetId(petId?: string, params?: FeedingScheduleQueryParams): Promise<{ schedules: FeedingSchedule[]; total: number }> {
+  /**
+   * Get feeding schedules for a user, optionally filtered by petId
+   */
+  async getFeedingSchedulesByPetId(userId: string, petId?: string, params?: FeedingScheduleQueryParams): Promise<{ schedules: FeedingSchedule[]; total: number }> {
     const { page = 1, limit = 10, isActive, foodType } = params || {};
     const offset = (page - 1) * limit;
 
-    // Build where conditions
-    const conditions = [];
+    // Build where conditions - always filter by userId
+    const conditions = [eq(feedingSchedules.userId, userId)];
 
     // Only filter by petId if provided
     if (petId) {
@@ -25,7 +28,7 @@ export class FeedingScheduleService {
       conditions.push(eq(feedingSchedules.foodType, foodType));
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = and(...conditions);
 
     // Get total count
     const result = await db
@@ -50,33 +53,35 @@ export class FeedingScheduleService {
     };
   }
 
-  async getFeedingScheduleById(id: string): Promise<FeedingSchedule | null> {
+  /**
+   * Get feeding schedule by ID, ensuring it belongs to the user
+   */
+  async getFeedingScheduleById(userId: string, id: string): Promise<FeedingSchedule | null> {
     const [schedule] = await db
-      .select({
-        id: feedingSchedules.id,
-        petId: feedingSchedules.petId,
-        time: feedingSchedules.time,
-        foodType: feedingSchedules.foodType,
-        amount: feedingSchedules.amount,
-        days: feedingSchedules.days,
-        isActive: feedingSchedules.isActive,
-        createdAt: feedingSchedules.createdAt,
-      })
+      .select()
       .from(feedingSchedules)
-      .where(eq(feedingSchedules.id, id));
+      .where(and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId)));
 
     return schedule || null;
   }
 
-  async createFeedingSchedule(scheduleData: Omit<NewFeedingSchedule, 'id' | 'createdAt'>): Promise<FeedingSchedule> {
-    // Verify pet exists
-    const [pet] = await db.select().from(pets).where(eq(pets.id, scheduleData.petId));
+  /**
+   * Create feeding schedule, ensuring the pet belongs to the user
+   */
+  async createFeedingSchedule(userId: string, scheduleData: Omit<NewFeedingSchedule, 'id' | 'userId' | 'createdAt'>): Promise<FeedingSchedule> {
+    // Verify pet exists and belongs to user
+    const [pet] = await db
+      .select()
+      .from(pets)
+      .where(and(eq(pets.id, scheduleData.petId), eq(pets.userId, userId)));
+
     if (!pet) {
       throw new Error('Pet not found');
     }
 
     const newSchedule: NewFeedingSchedule = {
       id: generateId(),
+      userId,
       ...scheduleData,
       createdAt: new Date(),
     };
@@ -93,27 +98,42 @@ export class FeedingScheduleService {
     return createdSchedule;
   }
 
-  async updateFeedingSchedule(id: string, updates: Partial<NewFeedingSchedule>): Promise<FeedingSchedule | null> {
+  /**
+   * Update feeding schedule, ensuring it belongs to the user
+   */
+  async updateFeedingSchedule(userId: string, id: string, updates: Partial<NewFeedingSchedule>): Promise<FeedingSchedule | null> {
+    // Don't allow updating userId
+    const { userId: _, ...safeUpdates } = updates as any;
+
     const [updatedSchedule] = await db
       .update(feedingSchedules)
-      .set(updates)
-      .where(eq(feedingSchedules.id, id))
+      .set(safeUpdates)
+      .where(and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId)))
       .returning();
 
     return updatedSchedule || null;
   }
 
-  async deleteFeedingSchedule(id: string): Promise<boolean> {
+  /**
+   * Delete feeding schedule, ensuring it belongs to the user
+   */
+  async deleteFeedingSchedule(userId: string, id: string): Promise<boolean> {
     const [deletedSchedule] = await db
       .delete(feedingSchedules)
-      .where(eq(feedingSchedules.id, id))
+      .where(and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId)))
       .returning();
 
     return !!deletedSchedule;
   }
 
-  async getActiveSchedules(petId?: string): Promise<FeedingSchedule[]> {
-    const conditions = [eq(feedingSchedules.isActive, true)];
+  /**
+   * Get active schedules for a user
+   */
+  async getActiveSchedules(userId: string, petId?: string): Promise<FeedingSchedule[]> {
+    const conditions = [
+      eq(feedingSchedules.userId, userId),
+      eq(feedingSchedules.isActive, true)
+    ];
 
     if (petId) {
       conditions.push(eq(feedingSchedules.petId, petId));
@@ -126,12 +146,16 @@ export class FeedingScheduleService {
       .orderBy(feedingSchedules.time);
   }
 
-  async getTodaySchedules(petId?: string): Promise<FeedingSchedule[]> {
+  /**
+   * Get today's schedules for a user
+   */
+  async getTodaySchedules(userId: string, petId?: string): Promise<FeedingSchedule[]> {
     const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const todayName = dayNames[today];
 
     const conditions = [
+      eq(feedingSchedules.userId, userId),
       eq(feedingSchedules.isActive, true),
       like(feedingSchedules.days, `%${todayName}%`),
     ];
@@ -147,12 +171,16 @@ export class FeedingScheduleService {
       .orderBy(feedingSchedules.time);
   }
 
-  async getNextFeedingTime(petId?: string): Promise<FeedingSchedule | null> {
+  /**
+   * Get next feeding time for a user
+   */
+  async getNextFeedingTime(userId: string, petId?: string): Promise<FeedingSchedule | null> {
     const today = new Date().getDay();
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const todayName = dayNames[today];
 
     const conditions = [
+      eq(feedingSchedules.userId, userId),
       eq(feedingSchedules.isActive, true),
       like(feedingSchedules.days, `%${todayName}%`),
     ];

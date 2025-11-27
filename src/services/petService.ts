@@ -4,12 +4,15 @@ import { PetQueryParams, Pet, NewPet } from '../types/api';
 import { generateId } from '../utils/id';
 
 export class PetService {
-  async getAllPets(params: PetQueryParams): Promise<{ pets: Pet[]; total: number }> {
+  /**
+   * Get all pets for a specific user
+   */
+  async getAllPets(userId: string, params: PetQueryParams): Promise<{ pets: Pet[]; total: number }> {
     const { page = 1, limit = 10, type, breed, gender } = params;
     const offset = (page - 1) * limit;
 
-    // Build where conditions
-    const conditions = [];
+    // Build where conditions - always filter by userId
+    const conditions = [eq(pets.userId, userId)];
 
     if (type) {
       conditions.push(eq(pets.type, type));
@@ -23,7 +26,7 @@ export class PetService {
       conditions.push(eq(pets.gender, gender));
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = and(...conditions);
 
     // Get total count
     const result = await db
@@ -48,14 +51,24 @@ export class PetService {
     };
   }
 
-  async getPetById(id: string): Promise<Pet | null> {
-    const [pet] = await db.select().from(pets).where(eq(pets.id, id));
+  /**
+   * Get a pet by ID, ensuring it belongs to the user
+   */
+  async getPetById(userId: string, id: string): Promise<Pet | null> {
+    const [pet] = await db
+      .select()
+      .from(pets)
+      .where(and(eq(pets.id, id), eq(pets.userId, userId)));
     return pet || null;
   }
 
-  async createPet(petData: Omit<NewPet, 'id' | 'createdAt' | 'updatedAt'>): Promise<Pet> {
+  /**
+   * Create a new pet for a user
+   */
+  async createPet(userId: string, petData: Omit<NewPet, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Pet> {
     const newPet: NewPet = {
       id: generateId(),
+      userId,
       ...petData,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -69,38 +82,50 @@ export class PetService {
     return createdPet;
   }
 
-  async updatePet(id: string, updates: Partial<NewPet>): Promise<Pet | null> {
+  /**
+   * Update a pet, ensuring it belongs to the user
+   */
+  async updatePet(userId: string, id: string, updates: Partial<NewPet>): Promise<Pet | null> {
+    // Don't allow updating userId
+    const { userId: _, ...safeUpdates } = updates as any;
+
     const updateData = {
-      ...updates,
+      ...safeUpdates,
       updatedAt: new Date(),
     };
 
     const [updatedPet] = await db
       .update(pets)
       .set(updateData)
-      .where(eq(pets.id, id))
+      .where(and(eq(pets.id, id), eq(pets.userId, userId)))
       .returning();
 
     return updatedPet || null;
   }
 
-  async deletePet(id: string): Promise<boolean> {
+  /**
+   * Delete a pet, ensuring it belongs to the user
+   */
+  async deletePet(userId: string, id: string): Promise<boolean> {
     const [deletedPet] = await db
       .delete(pets)
-      .where(eq(pets.id, id))
+      .where(and(eq(pets.id, id), eq(pets.userId, userId)))
       .returning();
 
     return !!deletedPet;
   }
 
-  async updatePetPhoto(id: string, photoUrl: string): Promise<Pet | null> {
+  /**
+   * Update pet photo, ensuring it belongs to the user
+   */
+  async updatePetPhoto(userId: string, id: string, photoUrl: string): Promise<Pet | null> {
     const [updatedPet] = await db
       .update(pets)
       .set({
         profilePhoto: photoUrl,
         updatedAt: new Date()
       })
-      .where(eq(pets.id, id))
+      .where(and(eq(pets.id, id), eq(pets.userId, userId)))
       .returning();
 
     return updatedPet || null;

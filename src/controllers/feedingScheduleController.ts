@@ -1,4 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+import { AuthenticatedRequest } from '../middleware/auth';
 import { FeedingScheduleService } from '../services/feedingScheduleService';
 import { successResponse, errorResponse, getPaginationParams } from '../utils/response';
 import { CreateFeedingScheduleRequest, UpdateFeedingScheduleRequest, FeedingScheduleQueryParams } from '../types/api';
@@ -12,9 +13,10 @@ export class FeedingScheduleController {
     this.feedingScheduleService = new FeedingScheduleService();
   }
 
-  // GET /api/feeding-schedules OR /api/pets/:petId/feeding-schedules - Get feeding schedules (optionally filtered by pet)
-  getFeedingSchedulesByPetId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // GET /api/feeding-schedules OR /api/pets/:petId/feeding-schedules - Get feeding schedules for authenticated user
+  getFeedingSchedulesByPetId = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       // Support both URL params (/pets/:petId/feeding-schedules) and query string (/feeding-schedules?petId=...)
       const petId = req.params.petId || (req.query.petId as string);
       const params: FeedingScheduleQueryParams = {
@@ -23,7 +25,7 @@ export class FeedingScheduleController {
         foodType: req.query.foodType as string,
       };
 
-      const { schedules, total } = await this.feedingScheduleService.getFeedingSchedulesByPetId(petId, params);
+      const { schedules, total } = await this.feedingScheduleService.getFeedingSchedulesByPetId(userId, petId, params);
       const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };
 
       successResponse(res, schedules, 200, meta);
@@ -33,15 +35,16 @@ export class FeedingScheduleController {
   };
 
   // GET /api/feeding-schedules/:id - Get feeding schedule by ID
-  getFeedingScheduleById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getFeedingScheduleById = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
 
       if (!id) {
         throw createError('Feeding schedule ID is required', 400, 'MISSING_ID');
       }
 
-      const schedule = await this.feedingScheduleService.getFeedingScheduleById(id);
+      const schedule = await this.feedingScheduleService.getFeedingScheduleById(userId, id);
 
       if (!schedule) {
         throw createError('Feeding schedule not found', 404, 'FEEDING_SCHEDULE_NOT_FOUND');
@@ -54,8 +57,9 @@ export class FeedingScheduleController {
   };
 
   // POST /api/feeding-schedules - Create new feeding schedule
-  createFeedingSchedule = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  createFeedingSchedule = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const scheduleData: CreateFeedingScheduleRequest = req.body;
 
       // Validation
@@ -63,7 +67,7 @@ export class FeedingScheduleController {
         throw createError('Pet ID, time, food type, amount, and days are required', 400, 'MISSING_REQUIRED_FIELDS');
       }
 
-      const schedule = await this.feedingScheduleService.createFeedingSchedule(scheduleData);
+      const schedule = await this.feedingScheduleService.createFeedingSchedule(userId, scheduleData);
       successResponse(res, schedule, 201);
     } catch (error) {
       next(error);
@@ -71,8 +75,9 @@ export class FeedingScheduleController {
   };
 
   // PUT /api/feeding-schedules/:id - Update feeding schedule
-  updateFeedingSchedule = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  updateFeedingSchedule = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
       const updates: UpdateFeedingScheduleRequest = req.body;
 
@@ -80,7 +85,7 @@ export class FeedingScheduleController {
         throw createError('Feeding schedule ID is required', 400, 'MISSING_ID');
       }
 
-      const schedule = await this.feedingScheduleService.updateFeedingSchedule(id, updates);
+      const schedule = await this.feedingScheduleService.updateFeedingSchedule(userId, id, updates);
 
       if (!schedule) {
         throw createError('Feeding schedule not found', 404, 'FEEDING_SCHEDULE_NOT_FOUND');
@@ -93,15 +98,16 @@ export class FeedingScheduleController {
   };
 
   // DELETE /api/feeding-schedules/:id - Delete feeding schedule
-  deleteFeedingSchedule = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  deleteFeedingSchedule = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const { id } = req.params;
 
       if (!id) {
         throw createError('Feeding schedule ID is required', 400, 'MISSING_ID');
       }
 
-      const deleted = await this.feedingScheduleService.deleteFeedingSchedule(id);
+      const deleted = await this.feedingScheduleService.deleteFeedingSchedule(userId, id);
 
       if (!deleted) {
         throw createError('Feeding schedule not found', 404, 'FEEDING_SCHEDULE_NOT_FOUND');
@@ -114,10 +120,11 @@ export class FeedingScheduleController {
   };
 
   // GET /api/feeding-schedules/active - Get all active feeding schedules
-  getActiveSchedules = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getActiveSchedules = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const schedules = await this.feedingScheduleService.getActiveSchedules(petId);
+      const schedules = await this.feedingScheduleService.getActiveSchedules(userId, petId);
       successResponse(res, schedules);
     } catch (error) {
       next(error);
@@ -125,10 +132,11 @@ export class FeedingScheduleController {
   };
 
   // GET /api/feeding-schedules/today - Get today's feeding schedules
-  getTodaySchedules = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getTodaySchedules = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const schedules = await this.feedingScheduleService.getTodaySchedules(petId);
+      const schedules = await this.feedingScheduleService.getTodaySchedules(userId, petId);
       successResponse(res, schedules);
     } catch (error) {
       next(error);
@@ -136,10 +144,11 @@ export class FeedingScheduleController {
   };
 
   // GET /api/feeding-schedules/next - Get next feeding time
-  getNextFeedingTime = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getNextFeedingTime = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const schedule = await this.feedingScheduleService.getNextFeedingTime(petId);
+      const schedule = await this.feedingScheduleService.getNextFeedingTime(userId, petId);
       successResponse(res, schedule);
     } catch (error) {
       next(error);
