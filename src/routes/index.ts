@@ -6,10 +6,16 @@ import eventRoutes from './eventRoutes';
 import feedingScheduleRoutes from './feedingScheduleRoutes';
 import expenseRoutes from './expenseRoutes';
 import budgetRoutes from './budgetRoutes';
+import subscriptionRoutes from './subscriptionRoutes';
+import { WebhookController } from '../controllers/webhookController';
 
 const router = Router();
 
-// All API routes require authentication
+// Webhook route - NO AUTH (has its own verification)
+const webhookController = new WebhookController();
+router.post('/subscription/webhook', webhookController.handleWebhook);
+
+// All other API routes require authentication
 router.use(requireAuth);
 
 // Mount routes
@@ -19,6 +25,7 @@ router.use('/events', eventRoutes);
 router.use('/feeding-schedules', feedingScheduleRoutes);
 router.use('/expenses', expenseRoutes);
 router.use('/budget-limits', budgetRoutes);
+router.use('/subscription', subscriptionRoutes);
 
 // Pet-specific nested routes
 router.use('/pets/:petId/health-records', healthRecordRoutes);

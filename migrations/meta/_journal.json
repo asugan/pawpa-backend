@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1761668547017,
-      "tag": "0000_salty_adam_warlock",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1761684887251,
-      "tag": "0001_magenta_slapstick",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1761962888137,
-      "tag": "0002_tiny_machine_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1764245739648,
-      "tag": "0003_dashing_the_professor",
+      "when": 1764366232854,
+      "tag": "0000_clear_warpath",
       "breakpoints": true
     }
   ]

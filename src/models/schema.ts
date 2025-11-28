@@ -154,6 +154,28 @@ export const budgetLimits = sqliteTable('budget_limits', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
 
+// Subscriptions table - unified table for internal trials and RevenueCat subscriptions
+export const subscriptions = sqliteTable('subscriptions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull().default('internal'), // 'internal' | 'revenuecat'
+  revenueCatId: text('revenue_cat_id'), // nullable, only for revenuecat subscriptions
+  tier: text('tier').notNull().default('pro'), // 'pro' (extensible for future tiers)
+  status: text('status').notNull().default('active'), // 'active' | 'expired' | 'cancelled'
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
+// Device trial registry - tracks devices that have used trials (fraud prevention)
+export const deviceTrialRegistry = sqliteTable('device_trial_registry', {
+  id: text('id').primaryKey(),
+  deviceId: text('device_id').notNull().unique(),
+  firstTrialUserId: text('first_trial_user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  trialUsedAt: integer('trial_used_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
 // ==========================================
 // Relations
 // ==========================================
@@ -168,6 +190,7 @@ export const userRelations = relations(user, ({ many }) => ({
   feedingSchedules: many(feedingSchedules),
   expenses: many(expenses),
   budgetLimits: many(budgetLimits),
+  subscriptions: many(subscriptions),
 }));
 
 // Session relations
@@ -254,6 +277,20 @@ export const budgetLimitsRelations = relations(budgetLimits, ({ one }) => ({
   }),
 }));
 
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  user: one(user, {
+    fields: [subscriptions.userId],
+    references: [user.id],
+  }),
+}));
+
+export const deviceTrialRegistryRelations = relations(deviceTrialRegistry, ({ one }) => ({
+  firstUser: one(user, {
+    fields: [deviceTrialRegistry.firstTrialUserId],
+    references: [user.id],
+  }),
+}));
+
 // ==========================================
 // Types
 // ==========================================
@@ -281,3 +318,7 @@ export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
 export type BudgetLimit = typeof budgetLimits.$inferSelect;
 export type NewBudgetLimit = typeof budgetLimits.$inferInsert;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type NewSubscription = typeof subscriptions.$inferInsert;
+export type DeviceTrialRegistry = typeof deviceTrialRegistry.$inferSelect;
+export type NewDeviceTrialRegistry = typeof deviceTrialRegistry.$inferInsert;
