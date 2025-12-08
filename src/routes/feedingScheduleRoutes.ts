@@ -9,7 +9,9 @@ const feedingScheduleController = new FeedingScheduleController();
 // Validation schemas
 const createFeedingScheduleSchema = z.object({
   petId: z.string().min(1, 'Pet ID is required'),
-  time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),
+  time: z
+    .string()
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),
   foodType: z.string().min(1, 'Food type is required'),
   amount: z.string().min(1, 'Amount is required'),
   days: z.string().min(1, 'Days are required'),
@@ -29,9 +31,17 @@ router.get('/', feedingScheduleController.getFeedingSchedulesByPetId);
 
 router.get('/:id', feedingScheduleController.getFeedingScheduleById);
 
-router.post('/', validateRequest(createFeedingScheduleSchema), feedingScheduleController.createFeedingSchedule);
+router.post(
+  '/',
+  validateRequest(createFeedingScheduleSchema),
+  feedingScheduleController.createFeedingSchedule
+);
 
-router.put('/:id', validateRequest(updateFeedingScheduleSchema), feedingScheduleController.updateFeedingSchedule);
+router.put(
+  '/:id',
+  validateRequest(updateFeedingScheduleSchema),
+  feedingScheduleController.updateFeedingSchedule
+);
 
 router.delete('/:id', feedingScheduleController.deleteFeedingSchedule);
 

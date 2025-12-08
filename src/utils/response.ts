@@ -4,7 +4,7 @@ import { ApiResponse, PaginationMeta } from '../types/api';
 export const successResponse = <T>(
   res: Response,
   data: T,
-  statusCode: number = 200,
+  statusCode = 200,
   meta?: PaginationMeta
 ): Response => {
   const response: ApiResponse<T> = {
@@ -19,7 +19,7 @@ export const errorResponse = (
   res: Response,
   code: string,
   message: string,
-  statusCode: number = 400,
+  statusCode = 400,
   details?: any
 ): Response => {
   const response: ApiResponse = {
@@ -35,8 +35,8 @@ export const errorResponse = (
 
 export const calculatePagination = (
   total: number,
-  page: number = 1,
-  limit: number = 10
+  page = 1,
+  limit = 10
 ): PaginationMeta => {
   const totalPages = Math.ceil(total / limit);
   return {
@@ -47,7 +47,9 @@ export const calculatePagination = (
   };
 };
 
-export const getPaginationParams = (query: any): { page: number; limit: number; offset: number } => {
+export const getPaginationParams = (
+  query: any
+): { page: number; limit: number; offset: number } => {
   const page = Math.max(1, parseInt(query.page) || 1);
   const limit = Math.max(1, Math.min(100, parseInt(query.limit) || 10));
   const offset = (page - 1) * limit;

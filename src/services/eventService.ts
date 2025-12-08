@@ -1,15 +1,23 @@
-import { eq, and, count, gte, lte } from 'drizzle-orm';
+import { and, count, eq, gte, lte } from 'drizzle-orm';
 import { db, events, pets } from '../config/database';
 import { EventQueryParams } from '../types/api';
 import { Event, NewEvent } from '../models/schema';
 import { generateId } from '../utils/id';
-import { getUTCTodayBoundaries, createUTCDateFilter, parseUTCDate } from '../lib/dateUtils';
+import {
+  createUTCDateFilter,
+  getUTCTodayBoundaries,
+  parseUTCDate,
+} from '../lib/dateUtils';
 
 export class EventService {
   /**
    * Get events for a user, optionally filtered by petId
    */
-  async getEventsByPetId(userId: string, petId?: string, params?: EventQueryParams): Promise<{ events: Event[]; total: number }> {
+  async getEventsByPetId(
+    userId: string,
+    petId?: string,
+    params?: EventQueryParams
+  ): Promise<{ events: Event[]; total: number }> {
     const { page = 1, limit = 10, type, startDate, endDate } = params || {};
     const offset = (page - 1) * limit;
 
@@ -60,7 +68,11 @@ export class EventService {
   /**
    * Get events for a specific date for a user
    */
-  async getEventsByDate(userId: string, date: string, params: EventQueryParams): Promise<{ events: Event[]; total: number }> {
+  async getEventsByDate(
+    userId: string,
+    date: string,
+    params: EventQueryParams
+  ): Promise<{ events: Event[]; total: number }> {
     const { page = 1, limit = 10, type } = params;
     const offset = (page - 1) * limit;
 
@@ -120,7 +132,10 @@ export class EventService {
   /**
    * Create event, ensuring the pet belongs to the user
    */
-  async createEvent(userId: string, eventData: Omit<NewEvent, 'id' | 'userId' | 'createdAt'>): Promise<Event> {
+  async createEvent(
+    userId: string,
+    eventData: Omit<NewEvent, 'id' | 'userId' | 'createdAt'>
+  ): Promise<Event> {
     // Verify pet exists and belongs to user
     const [pet] = await db
       .select()
@@ -138,10 +153,7 @@ export class EventService {
       createdAt: new Date(),
     };
 
-    const result = await db
-      .insert(events)
-      .values(newEvent)
-      .returning();
+    const result = await db.insert(events).values(newEvent).returning();
 
     const createdEvent = result[0];
     if (!createdEvent) {
@@ -153,7 +165,11 @@ export class EventService {
   /**
    * Update event, ensuring it belongs to the user
    */
-  async updateEvent(userId: string, id: string, updates: Partial<NewEvent>): Promise<Event | null> {
+  async updateEvent(
+    userId: string,
+    id: string,
+    updates: Partial<NewEvent>
+  ): Promise<Event | null> {
     // Don't allow updating userId
     const { userId: _, ...safeUpdates } = updates as any;
 
@@ -181,7 +197,11 @@ export class EventService {
   /**
    * Get upcoming events for a user
    */
-  async getUpcomingEvents(userId: string, petId?: string, days: number = 7): Promise<Event[]> {
+  async getUpcomingEvents(
+    userId: string,
+    petId?: string,
+    days = 7
+  ): Promise<Event[]> {
     const now = new Date();
     const futureDate = new Date(now);
     futureDate.setDate(futureDate.getDate() + days);
@@ -189,7 +209,7 @@ export class EventService {
     const conditions = [
       eq(events.userId, userId),
       gte(events.startTime, now),
-      lte(events.startTime, futureDate)
+      lte(events.startTime, futureDate),
     ];
 
     if (petId) {

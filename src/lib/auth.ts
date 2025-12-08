@@ -1,11 +1,11 @@
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "../config/database";
-import * as schema from "../models/schema";
+import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { db } from '../config/database';
+import * as schema from '../models/schema';
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
-    provider: "sqlite",
+    provider: 'sqlite',
     schema: {
       user: schema.user,
       session: schema.session,
@@ -29,11 +29,11 @@ export const auth = betterAuth({
   },
   */
   trustedOrigins: [
-    process.env.CORS_ORIGIN || "http://localhost:3001",
-    "https://appleid.apple.com",
-    "pawpa://",           // Mobile app deep link
-    "exp://",             // Expo Go development
-    "http://localhost:8081", // Expo Metro bundler
+    process.env.CORS_ORIGIN || 'http://localhost:3001',
+    'https://appleid.apple.com',
+    'pawpa://', // Mobile app deep link
+    'exp://', // Expo Go development
+    'http://localhost:8081', // Expo Metro bundler
   ],
   advanced: {
     // Allow null origin from mobile apps (React Native doesn't send Origin header)

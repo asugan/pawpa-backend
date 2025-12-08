@@ -1,9 +1,13 @@
-import { Response, NextFunction } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { PetService } from '../services/petService';
 import { HealthRecordService } from '../services/healthRecordService';
 import { successResponse } from '../utils/response';
-import { CreatePetRequest, UpdatePetRequest, PetQueryParams } from '../types/api';
+import {
+  CreatePetRequest,
+  PetQueryParams,
+  UpdatePetRequest,
+} from '../types/api';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
 
@@ -17,7 +21,11 @@ export class PetController {
   }
 
   // GET /api/pets - Get all pets for authenticated user
-  getAllPets = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getAllPets = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const params: PetQueryParams = {
@@ -40,7 +48,11 @@ export class PetController {
   };
 
   // GET /api/pets/:id - Get pet by ID
-  getPetById = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getPetById = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -62,23 +74,36 @@ export class PetController {
   };
 
   // POST /api/pets - Create new pet
-  createPet = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  createPet = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const petData: CreatePetRequest = req.body;
 
       // Validation
       if (!petData.name || !petData.type) {
-        throw createError('Name and type are required', 400, 'MISSING_REQUIRED_FIELDS');
+        throw createError(
+          'Name and type are required',
+          400,
+          'MISSING_REQUIRED_FIELDS'
+        );
       }
 
       // Convert string dates to UTC Date objects
       const convertedPetData = {
         ...petData,
-        ...(petData.birthDate && { birthDate: parseUTCDate(petData.birthDate) })
+        ...(petData.birthDate && {
+          birthDate: parseUTCDate(petData.birthDate),
+        }),
       };
 
-      const pet = await this.petService.createPet(userId, convertedPetData as any);
+      const pet = await this.petService.createPet(
+        userId,
+        convertedPetData as any
+      );
       successResponse(res, pet, 201);
     } catch (error) {
       next(error);
@@ -86,7 +111,11 @@ export class PetController {
   };
 
   // PUT /api/pets/:id - Update pet
-  updatePet = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  updatePet = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -99,10 +128,16 @@ export class PetController {
       // Convert string dates to UTC Date objects
       const convertedUpdates = {
         ...updates,
-        ...(updates.birthDate && { birthDate: parseUTCDate(updates.birthDate) })
+        ...(updates.birthDate && {
+          birthDate: parseUTCDate(updates.birthDate),
+        }),
       };
 
-      const pet = await this.petService.updatePet(userId, id, convertedUpdates as any);
+      const pet = await this.petService.updatePet(
+        userId,
+        id,
+        convertedUpdates as any
+      );
 
       if (!pet) {
         throw createError('Pet not found', 404, 'PET_NOT_FOUND');
@@ -115,7 +150,11 @@ export class PetController {
   };
 
   // DELETE /api/pets/:id - Delete pet
-  deletePet = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  deletePet = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -137,7 +176,11 @@ export class PetController {
   };
 
   // POST /api/pets/:id/photo - Update pet photo
-  updatePetPhoto = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  updatePetPhoto = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -164,7 +207,11 @@ export class PetController {
   };
 
   // GET /api/pets/:id/health-records - Get pet's health records
-  getPetHealthRecords = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getPetHealthRecords = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -188,7 +235,12 @@ export class PetController {
         endDate: req.query.endDate as string,
       };
 
-      const healthRecords = await this.healthRecordService.getHealthRecordsByPetId(userId, id, params);
+      const healthRecords =
+        await this.healthRecordService.getHealthRecordsByPetId(
+          userId,
+          id,
+          params
+        );
 
       successResponse(res, healthRecords.records);
     } catch (error) {

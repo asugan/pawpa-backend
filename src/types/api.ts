@@ -132,7 +132,7 @@ export type {
   Expense,
   NewExpense,
   BudgetLimit,
-  NewBudgetLimit
+  NewBudgetLimit,
 } from '../models/schema';
 
 // Query parameter types

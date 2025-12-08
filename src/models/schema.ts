@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 // ==========================================
@@ -10,10 +10,16 @@ export const user = sqliteTable('user', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
+  emailVerified: integer('email_verified', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   image: text('image'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // Session table (better-auth)
@@ -23,9 +29,15 @@ export const session = sqliteTable('session', {
   token: text('token').notNull().unique(),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // Account table (better-auth - for OAuth providers)
@@ -33,16 +45,26 @@ export const account = sqliteTable('account', {
   id: text('id').primaryKey(),
   accountId: text('account_id').notNull(),
   providerId: text('provider_id').notNull(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   idToken: text('id_token'),
-  accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp' }),
-  refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp' }),
+  accessTokenExpiresAt: integer('access_token_expires_at', {
+    mode: 'timestamp',
+  }),
+  refreshTokenExpiresAt: integer('refresh_token_expires_at', {
+    mode: 'timestamp',
+  }),
   scope: text('scope'),
   password: text('password'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // Verification table (better-auth - for email verification, password reset)
@@ -51,8 +73,12 @@ export const verification = sqliteTable('verification', {
   identifier: text('identifier').notNull(),
   value: text('value').notNull(),
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(
+    () => new Date()
+  ),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(
+    () => new Date()
+  ),
 });
 
 // ==========================================
@@ -62,7 +88,9 @@ export const verification = sqliteTable('verification', {
 // Pets table
 export const pets = sqliteTable('pets', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   type: text('type').notNull(),
   breed: text('breed'),
@@ -70,15 +98,23 @@ export const pets = sqliteTable('pets', {
   weight: real('weight'),
   gender: text('gender'),
   profilePhoto: text('profile_photo'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // Health records table
 export const healthRecords = sqliteTable('health_records', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  petId: text('pet_id').notNull().references(() => pets.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  petId: text('pet_id')
+    .notNull()
+    .references(() => pets.id, { onDelete: 'cascade' }),
   type: text('type').notNull(),
   title: text('title').notNull(),
   description: text('description'),
@@ -91,14 +127,20 @@ export const healthRecords = sqliteTable('health_records', {
   vaccineName: text('vaccine_name'),
   vaccineManufacturer: text('vaccine_manufacturer'),
   batchNumber: text('batch_number'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // Events table
 export const events = sqliteTable('events', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  petId: text('pet_id').notNull().references(() => pets.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  petId: text('pet_id')
+    .notNull()
+    .references(() => pets.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
   type: text('type').notNull(),
@@ -107,27 +149,39 @@ export const events = sqliteTable('events', {
   location: text('location'),
   notes: text('notes'),
   reminder: integer('reminder', { mode: 'boolean' }).notNull().default(false),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // Feeding schedules table
 export const feedingSchedules = sqliteTable('feeding_schedules', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  petId: text('pet_id').notNull().references(() => pets.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  petId: text('pet_id')
+    .notNull()
+    .references(() => pets.id, { onDelete: 'cascade' }),
   time: text('time').notNull(),
   foodType: text('food_type').notNull(),
   amount: text('amount').notNull(),
   days: text('days').notNull(),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // Expenses table
 export const expenses = sqliteTable('expenses', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  petId: text('pet_id').notNull().references(() => pets.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  petId: text('pet_id')
+    .notNull()
+    .references(() => pets.id, { onDelete: 'cascade' }),
   category: text('category').notNull(), // 'food', 'veterinary', 'medication', etc.
   amount: real('amount').notNull(),
   currency: text('currency').notNull().default('TRY'), // TRY, USD, EUR, etc.
@@ -137,43 +191,63 @@ export const expenses = sqliteTable('expenses', {
   receiptPhoto: text('receipt_photo'), // URL/path to receipt image
   vendor: text('vendor'), // Store/clinic name
   notes: text('notes'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // Budget limits table
 export const budgetLimits = sqliteTable('budget_limits', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  petId: text('pet_id').notNull().references(() => pets.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  petId: text('pet_id')
+    .notNull()
+    .references(() => pets.id, { onDelete: 'cascade' }),
   category: text('category'), // null = overall budget
   amount: real('amount').notNull(),
   currency: text('currency').notNull().default('TRY'),
   period: text('period').notNull(), // 'monthly', 'yearly'
   alertThreshold: real('alert_threshold').notNull().default(0.8), // Alert at 80%
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // Subscriptions table - unified table for internal trials and RevenueCat subscriptions
 export const subscriptions = sqliteTable('subscriptions', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
   provider: text('provider').notNull().default('internal'), // 'internal' | 'revenuecat'
   revenueCatId: text('revenue_cat_id'), // nullable, only for revenuecat subscriptions
   tier: text('tier').notNull().default('pro'), // 'pro' (extensible for future tiers)
   status: text('status').notNull().default('active'), // 'active' | 'expired' | 'cancelled'
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // Device trial registry - tracks devices that have used trials (fraud prevention)
 export const deviceTrialRegistry = sqliteTable('device_trial_registry', {
   id: text('id').primaryKey(),
   deviceId: text('device_id').notNull().unique(),
-  firstTrialUserId: text('first_trial_user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  trialUsedAt: integer('trial_used_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  firstTrialUserId: text('first_trial_user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  trialUsedAt: integer('trial_used_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // ==========================================
@@ -244,16 +318,19 @@ export const eventsRelations = relations(events, ({ one }) => ({
   }),
 }));
 
-export const feedingSchedulesRelations = relations(feedingSchedules, ({ one }) => ({
-  user: one(user, {
-    fields: [feedingSchedules.userId],
-    references: [user.id],
-  }),
-  pet: one(pets, {
-    fields: [feedingSchedules.petId],
-    references: [pets.id],
-  }),
-}));
+export const feedingSchedulesRelations = relations(
+  feedingSchedules,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [feedingSchedules.userId],
+      references: [user.id],
+    }),
+    pet: one(pets, {
+      fields: [feedingSchedules.petId],
+      references: [pets.id],
+    }),
+  })
+);
 
 export const expensesRelations = relations(expenses, ({ one }) => ({
   user: one(user, {
@@ -284,12 +361,15 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   }),
 }));
 
-export const deviceTrialRegistryRelations = relations(deviceTrialRegistry, ({ one }) => ({
-  firstUser: one(user, {
-    fields: [deviceTrialRegistry.firstTrialUserId],
-    references: [user.id],
-  }),
-}));
+export const deviceTrialRegistryRelations = relations(
+  deviceTrialRegistry,
+  ({ one }) => ({
+    firstUser: one(user, {
+      fields: [deviceTrialRegistry.firstTrialUserId],
+      references: [user.id],
+    }),
+  })
+);
 
 // ==========================================
 // Types

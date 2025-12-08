@@ -1,6 +1,7 @@
 # PawPa Backend API
 
-PawPa pet care mobile application backend server built with Node.js, Express, TypeScript, and SQLite.
+PawPa pet care mobile application backend server built with Node.js, Express, TypeScript, and
+SQLite.
 
 ## Features
 
@@ -23,28 +24,33 @@ PawPa pet care mobile application backend server built with Node.js, Express, Ty
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd pawpa-backend
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Set up environment variables:
+
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
 4. Set up the database:
+
 ```bash
 npm run db:migrate
 ```
 
 5. Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -65,10 +71,12 @@ The server will start on `http://localhost:3000`
 ## API Endpoints
 
 ### Health Check
+
 - `GET /health` - Server health status
 - `GET /api` - API information and available endpoints
 
 ### Pets (Coming in Phase 2)
+
 - `GET /api/pets` - List all pets
 - `GET /api/pets/:id` - Get pet details
 - `POST /api/pets` - Create new pet
@@ -76,18 +84,21 @@ The server will start on `http://localhost:3000`
 - `DELETE /api/pets/:id` - Delete pet
 
 ### Health Records (Coming in Phase 2)
+
 - `GET /api/pets/:petId/health-records` - Get pet health records
 - `POST /api/health-records` - Create health record
 - `PUT /api/health-records/:id` - Update health record
 - `DELETE /api/health-records/:id` - Delete health record
 
 ### Events (Coming in Phase 2)
+
 - `GET /api/pets/:petId/events` - Get pet events
 - `POST /api/events` - Create event
 - `PUT /api/events/:id` - Update event
 - `DELETE /api/events/:id` - Delete event
 
 ### Feeding Schedules (Coming in Phase 2)
+
 - `GET /api/pets/:petId/feeding-schedules` - Get feeding schedules
 - `POST /api/feeding-schedules` - Create feeding schedule
 - `PUT /api/feeding-schedules/:id` - Update feeding schedule

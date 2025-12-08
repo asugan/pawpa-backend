@@ -19,21 +19,24 @@ const expenseCategories = [
   'training',
   'insurance',
   'emergency',
-  'other'
+  'other',
 ] as const;
 
 const paymentMethods = [
   'cash',
   'credit_card',
   'debit_card',
-  'bank_transfer'
+  'bank_transfer',
 ] as const;
 
 const createExpenseSchema = z.object({
   petId: z.string().min(1, 'Pet ID is required'),
   category: z.enum(expenseCategories, { message: 'Invalid category' }),
   amount: z.number().positive('Amount must be positive'),
-  currency: z.string().length(3, 'Currency must be 3 characters (e.g., TRY, USD, EUR)').default('TRY'),
+  currency: z
+    .string()
+    .length(3, 'Currency must be 3 characters (e.g., TRY, USD, EUR)')
+    .default('TRY'),
   paymentMethod: z.enum(paymentMethods).optional(),
   description: z.string().optional(),
   date: z.string().min(1, 'Date is required'),
@@ -68,8 +71,16 @@ router.get('/by-category/:category', expenseController.getExpensesByCategory);
 // Standard CRUD routes
 router.get('/', expenseController.getExpensesByPetId);
 router.get('/:id', expenseController.getExpenseById);
-router.post('/', validateRequest(createExpenseSchema), expenseController.createExpense);
-router.put('/:id', validateRequest(updateExpenseSchema), expenseController.updateExpense);
+router.post(
+  '/',
+  validateRequest(createExpenseSchema),
+  expenseController.createExpense
+);
+router.put(
+  '/:id',
+  validateRequest(updateExpenseSchema),
+  expenseController.updateExpense
+);
 router.delete('/:id', expenseController.deleteExpense);
 
 export default router;

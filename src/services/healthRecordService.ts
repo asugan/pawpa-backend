@@ -1,4 +1,4 @@
-import { eq, and, desc, count, gte, lte } from 'drizzle-orm';
+import { and, count, desc, eq, gte, lte } from 'drizzle-orm';
 import { db, healthRecords, pets } from '../config/database';
 import { HealthRecordQueryParams } from '../types/api';
 import { HealthRecord, NewHealthRecord } from '../models/schema';
@@ -9,7 +9,11 @@ export class HealthRecordService {
   /**
    * Get health records for a user, optionally filtered by petId
    */
-  async getHealthRecordsByPetId(userId: string, petId?: string, params?: HealthRecordQueryParams): Promise<{ records: HealthRecord[]; total: number }> {
+  async getHealthRecordsByPetId(
+    userId: string,
+    petId?: string,
+    params?: HealthRecordQueryParams
+  ): Promise<{ records: HealthRecord[]; total: number }> {
     const { page = 1, limit = 10, type, startDate, endDate } = params || {};
     const offset = (page - 1) * limit;
 
@@ -60,7 +64,10 @@ export class HealthRecordService {
   /**
    * Get health record by ID, ensuring it belongs to the user
    */
-  async getHealthRecordById(userId: string, id: string): Promise<HealthRecord | null> {
+  async getHealthRecordById(
+    userId: string,
+    id: string
+  ): Promise<HealthRecord | null> {
     const [record] = await db
       .select()
       .from(healthRecords)
@@ -72,7 +79,10 @@ export class HealthRecordService {
   /**
    * Create health record, ensuring the pet belongs to the user
    */
-  async createHealthRecord(userId: string, recordData: Omit<NewHealthRecord, 'id' | 'userId' | 'createdAt'>): Promise<HealthRecord> {
+  async createHealthRecord(
+    userId: string,
+    recordData: Omit<NewHealthRecord, 'id' | 'userId' | 'createdAt'>
+  ): Promise<HealthRecord> {
     // Verify pet exists and belongs to user
     const [pet] = await db
       .select()
@@ -90,10 +100,7 @@ export class HealthRecordService {
       createdAt: new Date(),
     };
 
-    const result = await db
-      .insert(healthRecords)
-      .values(newRecord)
-      .returning();
+    const result = await db.insert(healthRecords).values(newRecord).returning();
 
     const createdRecord = result[0];
     if (!createdRecord) {
@@ -105,7 +112,11 @@ export class HealthRecordService {
   /**
    * Update health record, ensuring it belongs to the user
    */
-  async updateHealthRecord(userId: string, id: string, updates: Partial<NewHealthRecord>): Promise<HealthRecord | null> {
+  async updateHealthRecord(
+    userId: string,
+    id: string,
+    updates: Partial<NewHealthRecord>
+  ): Promise<HealthRecord | null> {
     // Don't allow updating userId
     const { userId: _, ...safeUpdates } = updates as any;
 
@@ -133,12 +144,15 @@ export class HealthRecordService {
   /**
    * Get upcoming vaccinations for a user
    */
-  async getUpcomingVaccinations(userId: string, petId?: string): Promise<HealthRecord[]> {
+  async getUpcomingVaccinations(
+    userId: string,
+    petId?: string
+  ): Promise<HealthRecord[]> {
     const now = new Date();
     const conditions = [
       eq(healthRecords.userId, userId),
       eq(healthRecords.type, 'vaccination'),
-      gte(healthRecords.nextDueDate, now)
+      gte(healthRecords.nextDueDate, now),
     ];
 
     if (petId) {

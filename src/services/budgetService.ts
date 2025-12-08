@@ -1,5 +1,5 @@
-import { eq, and, gte, lte, sum, desc, count } from 'drizzle-orm';
-import { db, budgetLimits, expenses, pets } from '../config/database';
+import { and, count, desc, eq, gte, lte, sum } from 'drizzle-orm';
+import { budgetLimits, db, expenses, pets } from '../config/database';
 import { BudgetQueryParams } from '../types/api';
 import { BudgetLimit, NewBudgetLimit } from '../models/schema';
 import { generateId } from '../utils/id';
@@ -16,14 +16,18 @@ export class BudgetService {
   /**
    * Get budget limits for a user, optionally filtered by petId
    */
-  async getBudgetLimitsByPetId(userId: string, petId: string, params: BudgetQueryParams): Promise<{ budgetLimits: BudgetLimit[]; total: number }> {
+  async getBudgetLimitsByPetId(
+    userId: string,
+    petId: string,
+    params: BudgetQueryParams
+  ): Promise<{ budgetLimits: BudgetLimit[]; total: number }> {
     const { page = 1, limit = 10, period, isActive, category } = params;
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
     const conditions = [
       eq(budgetLimits.userId, userId),
-      eq(budgetLimits.petId, petId)
+      eq(budgetLimits.petId, petId),
     ];
 
     if (isActive !== undefined) {
@@ -66,7 +70,10 @@ export class BudgetService {
   /**
    * Get budget limit by ID, ensuring it belongs to the user
    */
-  async getBudgetLimitById(userId: string, id: string): Promise<BudgetLimit | null> {
+  async getBudgetLimitById(
+    userId: string,
+    id: string
+  ): Promise<BudgetLimit | null> {
     const [budgetLimit] = await db
       .select()
       .from(budgetLimits)
@@ -78,7 +85,10 @@ export class BudgetService {
   /**
    * Create budget limit, ensuring the pet belongs to the user
    */
-  async createBudgetLimit(userId: string, budgetData: Omit<NewBudgetLimit, 'id' | 'userId' | 'createdAt'>): Promise<BudgetLimit> {
+  async createBudgetLimit(
+    userId: string,
+    budgetData: Omit<NewBudgetLimit, 'id' | 'userId' | 'createdAt'>
+  ): Promise<BudgetLimit> {
     // Verify pet exists and belongs to user
     const [pet] = await db
       .select()
@@ -111,7 +121,11 @@ export class BudgetService {
   /**
    * Update budget limit, ensuring it belongs to the user
    */
-  async updateBudgetLimit(userId: string, id: string, updates: Partial<NewBudgetLimit>): Promise<BudgetLimit | null> {
+  async updateBudgetLimit(
+    userId: string,
+    id: string,
+    updates: Partial<NewBudgetLimit>
+  ): Promise<BudgetLimit | null> {
     // Don't allow updating userId
     const { userId: _, ...safeUpdates } = updates as any;
 
@@ -139,10 +153,13 @@ export class BudgetService {
   /**
    * Get active budget limits for a user
    */
-  async getActiveBudgetLimits(userId: string, petId?: string): Promise<BudgetLimit[]> {
+  async getActiveBudgetLimits(
+    userId: string,
+    petId?: string
+  ): Promise<BudgetLimit[]> {
     const conditions = [
       eq(budgetLimits.userId, userId),
-      eq(budgetLimits.isActive, true)
+      eq(budgetLimits.isActive, true),
     ];
 
     if (petId) {
@@ -159,7 +176,10 @@ export class BudgetService {
   /**
    * Check budget alerts for a user
    */
-  async checkBudgetAlerts(userId: string, petId?: string): Promise<BudgetAlert[]> {
+  async checkBudgetAlerts(
+    userId: string,
+    petId?: string
+  ): Promise<BudgetAlert[]> {
     const activeBudgets = await this.getActiveBudgetLimits(userId, petId);
     const alerts: BudgetAlert[] = [];
 
@@ -172,8 +192,17 @@ export class BudgetService {
       // Determine date range based on period
       if (budget.period === 'monthly') {
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-      } else { // yearly
+        endDate = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999
+        );
+      } else {
+        // yearly
         startDate = new Date(now.getFullYear(), 0, 1);
         endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
       }
@@ -198,8 +227,9 @@ export class BudgetService {
         .where(and(...expenseConditions));
 
       const currentSpending = Number(spendingResult[0]?.total || 0);
-      const percentage = budget.amount > 0 ? (currentSpending / budget.amount) * 100 : 0;
-      const isExceeded = percentage >= (budget.alertThreshold * 100);
+      const percentage =
+        budget.amount > 0 ? (currentSpending / budget.amount) * 100 : 0;
+      const isExceeded = percentage >= budget.alertThreshold * 100;
       const remainingAmount = budget.amount - currentSpending;
 
       // Only include if threshold is exceeded
@@ -220,7 +250,10 @@ export class BudgetService {
   /**
    * Get budget status for a specific budget limit
    */
-  async getBudgetStatus(userId: string, budgetLimitId: string): Promise<{
+  async getBudgetStatus(
+    userId: string,
+    budgetLimitId: string
+  ): Promise<{
     budgetLimit: BudgetLimit;
     currentSpending: number;
     percentage: number;
@@ -238,8 +271,17 @@ export class BudgetService {
     // Determine date range based on period
     if (budget.period === 'monthly') {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    } else { // yearly
+      endDate = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999
+      );
+    } else {
+      // yearly
       startDate = new Date(now.getFullYear(), 0, 1);
       endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
@@ -264,7 +306,8 @@ export class BudgetService {
       .where(and(...expenseConditions));
 
     const currentSpending = Number(spendingResult[0]?.total || 0);
-    const percentage = budget.amount > 0 ? (currentSpending / budget.amount) * 100 : 0;
+    const percentage =
+      budget.amount > 0 ? (currentSpending / budget.amount) * 100 : 0;
     const remainingAmount = budget.amount - currentSpending;
 
     return {
@@ -278,12 +321,17 @@ export class BudgetService {
   /**
    * Get all budget statuses for a user
    */
-  async getAllBudgetStatuses(userId: string, petId?: string): Promise<Array<{
-    budgetLimit: BudgetLimit;
-    currentSpending: number;
-    percentage: number;
-    remainingAmount: number;
-  }>> {
+  async getAllBudgetStatuses(
+    userId: string,
+    petId?: string
+  ): Promise<
+    {
+      budgetLimit: BudgetLimit;
+      currentSpending: number;
+      percentage: number;
+      remainingAmount: number;
+    }[]
+  > {
     const activeBudgets = await this.getActiveBudgetLimits(userId, petId);
     const statuses = [];
 
@@ -296,8 +344,17 @@ export class BudgetService {
       // Determine date range based on period
       if (budget.period === 'monthly') {
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-      } else { // yearly
+        endDate = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999
+        );
+      } else {
+        // yearly
         startDate = new Date(now.getFullYear(), 0, 1);
         endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
       }
@@ -322,7 +379,8 @@ export class BudgetService {
         .where(and(...expenseConditions));
 
       const currentSpending = Number(spendingResult[0]?.total || 0);
-      const percentage = budget.amount > 0 ? (currentSpending / budget.amount) * 100 : 0;
+      const percentage =
+        budget.amount > 0 ? (currentSpending / budget.amount) * 100 : 0;
       const remainingAmount = budget.amount - currentSpending;
 
       statuses.push({

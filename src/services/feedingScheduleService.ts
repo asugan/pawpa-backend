@@ -1,4 +1,4 @@
-import { eq, like, and, desc, count } from 'drizzle-orm';
+import { and, count, desc, eq, like } from 'drizzle-orm';
 import { db, feedingSchedules, pets } from '../config/database';
 import { FeedingScheduleQueryParams } from '../types/api';
 import { FeedingSchedule, NewFeedingSchedule } from '../models/schema';
@@ -9,7 +9,11 @@ export class FeedingScheduleService {
   /**
    * Get feeding schedules for a user, optionally filtered by petId
    */
-  async getFeedingSchedulesByPetId(userId: string, petId?: string, params?: FeedingScheduleQueryParams): Promise<{ schedules: FeedingSchedule[]; total: number }> {
+  async getFeedingSchedulesByPetId(
+    userId: string,
+    petId?: string,
+    params?: FeedingScheduleQueryParams
+  ): Promise<{ schedules: FeedingSchedule[]; total: number }> {
     const { page = 1, limit = 10, isActive, foodType } = params || {};
     const offset = (page - 1) * limit;
 
@@ -57,11 +61,16 @@ export class FeedingScheduleService {
   /**
    * Get feeding schedule by ID, ensuring it belongs to the user
    */
-  async getFeedingScheduleById(userId: string, id: string): Promise<FeedingSchedule | null> {
+  async getFeedingScheduleById(
+    userId: string,
+    id: string
+  ): Promise<FeedingSchedule | null> {
     const [schedule] = await db
       .select()
       .from(feedingSchedules)
-      .where(and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId)));
+      .where(
+        and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId))
+      );
 
     return schedule || null;
   }
@@ -69,7 +78,10 @@ export class FeedingScheduleService {
   /**
    * Create feeding schedule, ensuring the pet belongs to the user
    */
-  async createFeedingSchedule(userId: string, scheduleData: Omit<NewFeedingSchedule, 'id' | 'userId' | 'createdAt'>): Promise<FeedingSchedule> {
+  async createFeedingSchedule(
+    userId: string,
+    scheduleData: Omit<NewFeedingSchedule, 'id' | 'userId' | 'createdAt'>
+  ): Promise<FeedingSchedule> {
     // Verify pet exists and belongs to user
     const [pet] = await db
       .select()
@@ -102,14 +114,20 @@ export class FeedingScheduleService {
   /**
    * Update feeding schedule, ensuring it belongs to the user
    */
-  async updateFeedingSchedule(userId: string, id: string, updates: Partial<NewFeedingSchedule>): Promise<FeedingSchedule | null> {
+  async updateFeedingSchedule(
+    userId: string,
+    id: string,
+    updates: Partial<NewFeedingSchedule>
+  ): Promise<FeedingSchedule | null> {
     // Don't allow updating userId
     const { userId: _, ...safeUpdates } = updates as any;
 
     const [updatedSchedule] = await db
       .update(feedingSchedules)
       .set(safeUpdates)
-      .where(and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId)))
+      .where(
+        and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId))
+      )
       .returning();
 
     return updatedSchedule || null;
@@ -121,7 +139,9 @@ export class FeedingScheduleService {
   async deleteFeedingSchedule(userId: string, id: string): Promise<boolean> {
     const [deletedSchedule] = await db
       .delete(feedingSchedules)
-      .where(and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId)))
+      .where(
+        and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId))
+      )
       .returning();
 
     return !!deletedSchedule;
@@ -130,10 +150,13 @@ export class FeedingScheduleService {
   /**
    * Get active schedules for a user
    */
-  async getActiveSchedules(userId: string, petId?: string): Promise<FeedingSchedule[]> {
+  async getActiveSchedules(
+    userId: string,
+    petId?: string
+  ): Promise<FeedingSchedule[]> {
     const conditions = [
       eq(feedingSchedules.userId, userId),
-      eq(feedingSchedules.isActive, true)
+      eq(feedingSchedules.isActive, true),
     ];
 
     if (petId) {
@@ -150,10 +173,21 @@ export class FeedingScheduleService {
   /**
    * Get today's schedules for a user
    */
-  async getTodaySchedules(userId: string, petId?: string): Promise<FeedingSchedule[]> {
+  async getTodaySchedules(
+    userId: string,
+    petId?: string
+  ): Promise<FeedingSchedule[]> {
     // Use UTC date to get consistent day regardless of server timezone
     const today = new Date(toUTCISOString(new Date())).getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayNames = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ];
     const todayName = dayNames[today];
 
     const conditions = [
@@ -176,10 +210,21 @@ export class FeedingScheduleService {
   /**
    * Get next feeding time for a user
    */
-  async getNextFeedingTime(userId: string, petId?: string): Promise<FeedingSchedule | null> {
+  async getNextFeedingTime(
+    userId: string,
+    petId?: string
+  ): Promise<FeedingSchedule | null> {
     // Use UTC date to get consistent day regardless of server timezone
     const today = new Date(toUTCISOString(new Date())).getUTCDay();
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayNames = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ];
     const todayName = dayNames[today];
 
     const conditions = [
@@ -193,7 +238,9 @@ export class FeedingScheduleService {
     }
 
     // Using UTC time for consistency. TODO: Consider user's local timezone in future
-    const currentTime = new Date(toUTCISOString(new Date())).toTimeString().slice(0, 5); // HH:MM format
+    const currentTime = new Date(toUTCISOString(new Date()))
+      .toTimeString()
+      .slice(0, 5); // HH:MM format
 
     const [schedule] = await db
       .select()

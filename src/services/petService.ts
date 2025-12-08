@@ -1,13 +1,16 @@
-import { eq, like, and, desc, count } from 'drizzle-orm';
+import { and, count, desc, eq, like } from 'drizzle-orm';
 import { db, pets } from '../config/database';
-import { PetQueryParams, Pet, NewPet } from '../types/api';
+import { NewPet, Pet, PetQueryParams } from '../types/api';
 import { generateId } from '../utils/id';
 
 export class PetService {
   /**
    * Get all pets for a specific user
    */
-  async getAllPets(userId: string, params: PetQueryParams): Promise<{ pets: Pet[]; total: number }> {
+  async getAllPets(
+    userId: string,
+    params: PetQueryParams
+  ): Promise<{ pets: Pet[]; total: number }> {
     const { page = 1, limit = 10, type, breed, gender } = params;
     const offset = (page - 1) * limit;
 
@@ -65,7 +68,10 @@ export class PetService {
   /**
    * Create a new pet for a user
    */
-  async createPet(userId: string, petData: Omit<NewPet, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Pet> {
+  async createPet(
+    userId: string,
+    petData: Omit<NewPet, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+  ): Promise<Pet> {
     const newPet: NewPet = {
       id: generateId(),
       userId,
@@ -85,7 +91,11 @@ export class PetService {
   /**
    * Update a pet, ensuring it belongs to the user
    */
-  async updatePet(userId: string, id: string, updates: Partial<NewPet>): Promise<Pet | null> {
+  async updatePet(
+    userId: string,
+    id: string,
+    updates: Partial<NewPet>
+  ): Promise<Pet | null> {
     // Don't allow updating userId
     const { userId: _, ...safeUpdates } = updates as any;
 
@@ -118,12 +128,16 @@ export class PetService {
   /**
    * Update pet photo, ensuring it belongs to the user
    */
-  async updatePetPhoto(userId: string, id: string, photoUrl: string): Promise<Pet | null> {
+  async updatePetPhoto(
+    userId: string,
+    id: string,
+    photoUrl: string
+  ): Promise<Pet | null> {
     const [updatedPet] = await db
       .update(pets)
       .set({
         profilePhoto: photoUrl,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(and(eq(pets.id, id), eq(pets.userId, userId)))
       .returning();

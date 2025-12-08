@@ -1,8 +1,16 @@
-import { Response, NextFunction } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { ExpenseService } from '../services/expenseService';
-import { successResponse, errorResponse, getPaginationParams } from '../utils/response';
-import { CreateExpenseRequest, UpdateExpenseRequest, ExpenseQueryParams } from '../types/api';
+import {
+  errorResponse,
+  getPaginationParams,
+  successResponse,
+} from '../utils/response';
+import {
+  CreateExpenseRequest,
+  ExpenseQueryParams,
+  UpdateExpenseRequest,
+} from '../types/api';
 import { Expense } from '../models/schema';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
@@ -15,7 +23,11 @@ export class ExpenseController {
   }
 
   // GET /api/expenses OR /api/pets/:petId/expenses - Get expenses for authenticated user
-  getExpensesByPetId = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getExpensesByPetId = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       // Support both URL params (/pets/:petId/expenses) and query string (/expenses?petId=...)
@@ -25,14 +37,27 @@ export class ExpenseController {
         category: req.query.category as string,
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
-        minAmount: req.query.minAmount ? parseFloat(req.query.minAmount as string) : undefined,
-        maxAmount: req.query.maxAmount ? parseFloat(req.query.maxAmount as string) : undefined,
+        minAmount: req.query.minAmount
+          ? parseFloat(req.query.minAmount as string)
+          : undefined,
+        maxAmount: req.query.maxAmount
+          ? parseFloat(req.query.maxAmount as string)
+          : undefined,
         currency: req.query.currency as string,
         paymentMethod: req.query.paymentMethod as string,
       };
 
-      const { expenses, total } = await this.expenseService.getExpensesByPetId(userId, petId, params);
-      const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };
+      const { expenses, total } = await this.expenseService.getExpensesByPetId(
+        userId,
+        petId,
+        params
+      );
+      const meta = {
+        total,
+        page: params.page!,
+        limit: params.limit!,
+        totalPages: Math.ceil(total / params.limit!),
+      };
 
       successResponse(res, expenses, 200, meta);
     } catch (error) {
@@ -41,7 +66,11 @@ export class ExpenseController {
   };
 
   // GET /api/expenses/:id - Get expense by ID
-  getExpenseById = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getExpenseById = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -63,14 +92,28 @@ export class ExpenseController {
   };
 
   // POST /api/expenses - Create new expense
-  createExpense = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  createExpense = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const expenseData: CreateExpenseRequest = req.body;
 
       // Validation
-      if (!expenseData.petId || !expenseData.category || expenseData.amount === undefined || !expenseData.currency || !expenseData.date) {
-        throw createError('Pet ID, category, amount, currency, and date are required', 400, 'MISSING_REQUIRED_FIELDS');
+      if (
+        !expenseData.petId ||
+        !expenseData.category ||
+        expenseData.amount === undefined ||
+        !expenseData.currency ||
+        !expenseData.date
+      ) {
+        throw createError(
+          'Pet ID, category, amount, currency, and date are required',
+          400,
+          'MISSING_REQUIRED_FIELDS'
+        );
       }
 
       // Convert date string to UTC Date object
@@ -86,7 +129,11 @@ export class ExpenseController {
   };
 
   // PUT /api/expenses/:id - Update expense
-  updateExpense = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  updateExpense = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -102,7 +149,11 @@ export class ExpenseController {
         updateData.date = parseUTCDate(updates.date);
       }
 
-      const expense = await this.expenseService.updateExpense(userId, id, updateData);
+      const expense = await this.expenseService.updateExpense(
+        userId,
+        id,
+        updateData
+      );
 
       if (!expense) {
         throw createError('Expense not found', 404, 'EXPENSE_NOT_FOUND');
@@ -115,7 +166,11 @@ export class ExpenseController {
   };
 
   // DELETE /api/expenses/:id - Delete expense
-  deleteExpense = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  deleteExpense = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -137,15 +192,29 @@ export class ExpenseController {
   };
 
   // GET /api/expenses/stats - Get expense statistics
-  getExpenseStats = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getExpenseStats = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate as string)
+        : undefined;
+      const endDate = req.query.endDate
+        ? new Date(req.query.endDate as string)
+        : undefined;
       const category = req.query.category as string;
 
-      const stats = await this.expenseService.getExpenseStats(userId, petId, startDate, endDate, category);
+      const stats = await this.expenseService.getExpenseStats(
+        userId,
+        petId,
+        startDate,
+        endDate,
+        category
+      );
       successResponse(res, stats);
     } catch (error) {
       next(error);
@@ -153,18 +222,35 @@ export class ExpenseController {
   };
 
   // GET /api/expenses/by-date - Get expenses by date range
-  getExpensesByDateRange = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getExpensesByDateRange = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate as string)
+        : undefined;
+      const endDate = req.query.endDate
+        ? new Date(req.query.endDate as string)
+        : undefined;
 
       if (!startDate || !endDate) {
-        throw createError('Start date and end date are required', 400, 'MISSING_DATE_RANGE');
+        throw createError(
+          'Start date and end date are required',
+          400,
+          'MISSING_DATE_RANGE'
+        );
       }
 
-      const expenses = await this.expenseService.getExpensesByDateRange(userId, petId, startDate, endDate);
+      const expenses = await this.expenseService.getExpensesByDateRange(
+        userId,
+        petId,
+        startDate,
+        endDate
+      );
       successResponse(res, expenses);
     } catch (error) {
       next(error);
@@ -172,14 +258,28 @@ export class ExpenseController {
   };
 
   // GET /api/expenses/monthly - Get monthly expenses
-  getMonthlyExpenses = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getMonthlyExpenses = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
-      const month = req.query.month !== undefined ? parseInt(req.query.month as string) : undefined;
+      const year = req.query.year
+        ? parseInt(req.query.year as string)
+        : undefined;
+      const month =
+        req.query.month !== undefined
+          ? parseInt(req.query.month as string)
+          : undefined;
 
-      const expenses = await this.expenseService.getMonthlyExpenses(userId, petId, year, month);
+      const expenses = await this.expenseService.getMonthlyExpenses(
+        userId,
+        petId,
+        year,
+        month
+      );
       successResponse(res, expenses);
     } catch (error) {
       next(error);
@@ -187,13 +287,23 @@ export class ExpenseController {
   };
 
   // GET /api/expenses/yearly - Get yearly expenses
-  getYearlyExpenses = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getYearlyExpenses = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+      const year = req.query.year
+        ? parseInt(req.query.year as string)
+        : undefined;
 
-      const expenses = await this.expenseService.getYearlyExpenses(userId, petId, year);
+      const expenses = await this.expenseService.getYearlyExpenses(
+        userId,
+        petId,
+        year
+      );
       successResponse(res, expenses);
     } catch (error) {
       next(error);
@@ -201,7 +311,11 @@ export class ExpenseController {
   };
 
   // GET /api/expenses/by-category/:category - Get expenses by category
-  getExpensesByCategory = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getExpensesByCategory = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { category } = req.params;
@@ -211,7 +325,11 @@ export class ExpenseController {
         throw createError('Category is required', 400, 'MISSING_CATEGORY');
       }
 
-      const expenses = await this.expenseService.getExpensesByCategory(userId, category, petId);
+      const expenses = await this.expenseService.getExpensesByCategory(
+        userId,
+        category,
+        petId
+      );
       successResponse(res, expenses);
     } catch (error) {
       next(error);
@@ -219,17 +337,33 @@ export class ExpenseController {
   };
 
   // GET /api/expenses/export/csv - Export expenses as CSV
-  exportExpensesCSV = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  exportExpensesCSV = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const petId = req.query.petId as string;
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate as string)
+        : undefined;
+      const endDate = req.query.endDate
+        ? new Date(req.query.endDate as string)
+        : undefined;
 
-      const csvContent = await this.expenseService.exportExpensesCSV(userId, petId, startDate, endDate);
+      const csvContent = await this.expenseService.exportExpensesCSV(
+        userId,
+        petId,
+        startDate,
+        endDate
+      );
 
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename="expenses.csv"');
+      res.setHeader(
+        'Content-Disposition',
+        'attachment; filename="expenses.csv"'
+      );
       res.status(200).send(csvContent);
     } catch (error) {
       next(error);
@@ -237,10 +371,18 @@ export class ExpenseController {
   };
 
   // GET /api/expenses/export/pdf - Export expenses as PDF
-  exportExpensesPDF = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  exportExpensesPDF = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // This will be implemented after pdfkit is installed
-      throw createError('PDF export not yet implemented', 501, 'NOT_IMPLEMENTED');
+      throw createError(
+        'PDF export not yet implemented',
+        501,
+        'NOT_IMPLEMENTED'
+      );
     } catch (error) {
       next(error);
     }

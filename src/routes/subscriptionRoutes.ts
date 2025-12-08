@@ -24,10 +24,18 @@ router.get('/status', subscriptionController.getSubscriptionStatus);
 router.get('/trial-status', subscriptionController.getTrialStatus);
 
 // POST /api/subscription/start-trial - Start a trial
-router.post('/start-trial', validateRequest(startTrialSchema), subscriptionController.startTrial);
+router.post(
+  '/start-trial',
+  validateRequest(startTrialSchema),
+  subscriptionController.startTrial
+);
 
 // POST /api/subscription/check-device - Check device eligibility
-router.post('/check-device', validateRequest(checkDeviceSchema), subscriptionController.checkDeviceEligibility);
+router.post(
+  '/check-device',
+  validateRequest(checkDeviceSchema),
+  subscriptionController.checkDeviceEligibility
+);
 
 // POST /api/subscription/deactivate-trial - Deprecated: Trial is auto-converted on purchase
 router.post('/deactivate-trial', subscriptionController.deactivateTrial);

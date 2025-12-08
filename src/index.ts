@@ -34,11 +34,10 @@ const startServer = async () => {
     });
 
     // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
+    process.on('uncaughtException', error => {
       console.error('Uncaught Exception:', error);
       gracefulShutdown('uncaughtException');
     });
-
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);

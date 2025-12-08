@@ -1,7 +1,16 @@
-import { eq, and, gt } from 'drizzle-orm';
-import { db, subscriptions, deviceTrialRegistry, Subscription } from '../config/database';
+import { and, eq, gt } from 'drizzle-orm';
+import {
+  Subscription,
+  db,
+  deviceTrialRegistry,
+  subscriptions,
+} from '../config/database';
 import { generateId } from '../utils/id';
-import { SUBSCRIPTION_CONFIG, SUBSCRIPTION_PROVIDERS, SUBSCRIPTION_STATUSES } from '../config/subscriptionConfig';
+import {
+  SUBSCRIPTION_CONFIG,
+  SUBSCRIPTION_PROVIDERS,
+  SUBSCRIPTION_STATUSES,
+} from '../config/subscriptionConfig';
 
 /**
  * Unified subscription status - single source of truth for frontend
@@ -29,7 +38,10 @@ export class SubscriptionService {
    * Get unified subscription status for a user
    * This is the main endpoint - frontend should use this for all status checks
    */
-  async getSubscriptionStatus(userId: string, deviceId?: string): Promise<UnifiedSubscriptionStatus> {
+  async getSubscriptionStatus(
+    userId: string,
+    deviceId?: string
+  ): Promise<UnifiedSubscriptionStatus> {
     // Get the user's active subscription (either internal trial or revenuecat)
     const [subscription] = await db
       .select()
@@ -61,7 +73,8 @@ export class SubscriptionService {
         expiresAt: null,
         daysRemaining: 0,
         isExpired: !!expiredSubscription,
-        isCancelled: expiredSubscription?.status === SUBSCRIPTION_STATUSES.CANCELLED,
+        isCancelled:
+          expiredSubscription?.status === SUBSCRIPTION_STATUSES.CANCELLED,
         canStartTrial,
         provider: null,
       };
@@ -72,7 +85,10 @@ export class SubscriptionService {
 
     return {
       hasActiveSubscription: true,
-      subscriptionType: subscription.provider === SUBSCRIPTION_PROVIDERS.INTERNAL ? 'trial' : 'paid',
+      subscriptionType:
+        subscription.provider === SUBSCRIPTION_PROVIDERS.INTERNAL
+          ? 'trial'
+          : 'paid',
       tier: subscription.tier,
       expiresAt: expiresAt.toISOString(),
       daysRemaining,
@@ -165,15 +181,13 @@ export class SubscriptionService {
     }
 
     // Register device to prevent future trials
-    await db
-      .insert(deviceTrialRegistry)
-      .values({
-        id: generateId(),
-        deviceId,
-        firstTrialUserId: userId,
-        trialUsedAt: now,
-        createdAt: now,
-      });
+    await db.insert(deviceTrialRegistry).values({
+      id: generateId(),
+      deviceId,
+      firstTrialUserId: userId,
+      trialUsedAt: now,
+      createdAt: now,
+    });
 
     return newSubscription;
   }
@@ -306,7 +320,9 @@ export class SubscriptionService {
    * Find user ID by RevenueCat app user ID
    * RevenueCat sends app_user_id in webhooks which should match our userId
    */
-  async findUserByRevenueCatAppUserId(appUserId: string): Promise<string | null> {
+  async findUserByRevenueCatAppUserId(
+    appUserId: string
+  ): Promise<string | null> {
     // In our case, app_user_id is the same as userId
     return appUserId;
   }

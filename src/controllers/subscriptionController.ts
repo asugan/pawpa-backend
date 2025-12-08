@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { SubscriptionService } from '../services/subscriptionService';
 import { successResponse } from '../utils/response';
@@ -15,12 +15,19 @@ export class SubscriptionController {
    * GET /api/subscription/status
    * Get unified subscription status (main endpoint for frontend)
    */
-  getSubscriptionStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getSubscriptionStatus = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const deviceId = req.query.deviceId as string | undefined;
 
-      const status = await this.subscriptionService.getSubscriptionStatus(userId, deviceId);
+      const status = await this.subscriptionService.getSubscriptionStatus(
+        userId,
+        deviceId
+      );
       successResponse(res, status);
     } catch (error) {
       next(error);
@@ -31,16 +38,24 @@ export class SubscriptionController {
    * GET /api/subscription/trial-status
    * @deprecated Use /status instead - kept for backward compatibility
    */
-  getTrialStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getTrialStatus = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const deviceId = req.query.deviceId as string | undefined;
 
-      const status = await this.subscriptionService.getSubscriptionStatus(userId, deviceId);
+      const status = await this.subscriptionService.getSubscriptionStatus(
+        userId,
+        deviceId
+      );
 
       // Map to old format for backward compatibility
       successResponse(res, {
-        hasActiveTrial: status.hasActiveSubscription && status.subscriptionType === 'trial',
+        hasActiveTrial:
+          status.hasActiveSubscription && status.subscriptionType === 'trial',
         trialStartDate: null, // No longer tracked separately
         trialEndDate: status.expiresAt,
         trialDaysRemaining: status.daysRemaining,
@@ -56,7 +71,11 @@ export class SubscriptionController {
    * POST /api/subscription/start-trial
    * Start a trial for the current user
    */
-  startTrial = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  startTrial = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { deviceId } = req.body;
@@ -65,26 +84,45 @@ export class SubscriptionController {
         throw createError('Device ID is required', 400, 'MISSING_DEVICE_ID');
       }
 
-      const subscription = await this.subscriptionService.startTrial(userId, deviceId);
+      const subscription = await this.subscriptionService.startTrial(
+        userId,
+        deviceId
+      );
 
-      successResponse(res, {
-        success: true,
-        subscription: {
-          id: subscription.id,
-          provider: subscription.provider,
-          tier: subscription.tier,
-          status: subscription.status,
-          expiresAt: subscription.expiresAt.toISOString(),
+      successResponse(
+        res,
+        {
+          success: true,
+          subscription: {
+            id: subscription.id,
+            provider: subscription.provider,
+            tier: subscription.tier,
+            status: subscription.status,
+            expiresAt: subscription.expiresAt.toISOString(),
+          },
         },
-      }, 201);
+        201
+      );
     } catch (error) {
       // Handle specific errors
       if (error instanceof Error) {
         if (error.message === 'User already has a subscription') {
-          return next(createError('User already has a subscription', 409, 'SUBSCRIPTION_EXISTS'));
+          return next(
+            createError(
+              'User already has a subscription',
+              409,
+              'SUBSCRIPTION_EXISTS'
+            )
+          );
         }
         if (error.message === 'Device has already used a trial') {
-          return next(createError('This device has already used a trial', 409, 'DEVICE_TRIAL_USED'));
+          return next(
+            createError(
+              'This device has already used a trial',
+              409,
+              'DEVICE_TRIAL_USED'
+            )
+          );
         }
       }
       next(error);
@@ -95,7 +133,11 @@ export class SubscriptionController {
    * POST /api/subscription/check-device
    * Check if a device is eligible for a trial
    */
-  checkDeviceEligibility = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  checkDeviceEligibility = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { deviceId } = req.body;
 
@@ -103,7 +145,8 @@ export class SubscriptionController {
         throw createError('Device ID is required', 400, 'MISSING_DEVICE_ID');
       }
 
-      const eligibility = await this.subscriptionService.checkDeviceEligibility(deviceId);
+      const eligibility =
+        await this.subscriptionService.checkDeviceEligibility(deviceId);
       successResponse(res, eligibility);
     } catch (error) {
       next(error);
@@ -114,17 +157,25 @@ export class SubscriptionController {
    * POST /api/subscription/deactivate-trial
    * @deprecated Trial is now automatically converted when RevenueCat subscription is created
    */
-  deactivateTrial = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  deactivateTrial = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
 
-      const deactivated = await this.subscriptionService.expireInternalTrial(userId);
+      const deactivated =
+        await this.subscriptionService.expireInternalTrial(userId);
 
       if (!deactivated) {
         throw createError('No active trial found', 404, 'NO_ACTIVE_TRIAL');
       }
 
-      successResponse(res, { success: true, message: 'Trial deactivated successfully' });
+      successResponse(res, {
+        success: true,
+        message: 'Trial deactivated successfully',
+      });
     } catch (error) {
       next(error);
     }

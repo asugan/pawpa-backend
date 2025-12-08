@@ -1,12 +1,26 @@
-import { eq, and, gte, lte, between, desc, count, sum, sql } from 'drizzle-orm';
+import { and, between, count, desc, eq, gte, lte, sql, sum } from 'drizzle-orm';
 import { db, expenses, pets } from '../config/database';
 import { ExpenseQueryParams } from '../types/api';
 import { Expense, NewExpense } from '../models/schema';
 import { generateId } from '../utils/id';
 
 export class ExpenseService {
-  async getExpensesByPetId(userId: string, petId?: string, params?: ExpenseQueryParams): Promise<{ expenses: Expense[]; total: number }> {
-    const { page = 1, limit = 10, category, startDate, endDate, minAmount, maxAmount, currency, paymentMethod } = params || {};
+  async getExpensesByPetId(
+    userId: string,
+    petId?: string,
+    params?: ExpenseQueryParams
+  ): Promise<{ expenses: Expense[]; total: number }> {
+    const {
+      page = 1,
+      limit = 10,
+      category,
+      startDate,
+      endDate,
+      minAmount,
+      maxAmount,
+      currency,
+      paymentMethod,
+    } = params || {};
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
@@ -79,7 +93,10 @@ export class ExpenseService {
     return expense || null;
   }
 
-  async createExpense(userId: string, expenseData: Omit<NewExpense, 'id' | 'userId' | 'createdAt'>): Promise<Expense> {
+  async createExpense(
+    userId: string,
+    expenseData: Omit<NewExpense, 'id' | 'userId' | 'createdAt'>
+  ): Promise<Expense> {
     // Verify pet exists and belongs to user
     const [pet] = await db
       .select()
@@ -97,10 +114,7 @@ export class ExpenseService {
       createdAt: new Date(),
     };
 
-    const result = await db
-      .insert(expenses)
-      .values(newExpense)
-      .returning();
+    const result = await db.insert(expenses).values(newExpense).returning();
 
     const createdExpense = result[0];
     if (!createdExpense) {
@@ -109,7 +123,11 @@ export class ExpenseService {
     return createdExpense;
   }
 
-  async updateExpense(userId: string, id: string, updates: Partial<NewExpense>): Promise<Expense | null> {
+  async updateExpense(
+    userId: string,
+    id: string,
+    updates: Partial<NewExpense>
+  ): Promise<Expense | null> {
     // Don't allow updating userId
     const { userId: _, ...safeUpdates } = updates as any;
 
@@ -131,10 +149,15 @@ export class ExpenseService {
     return !!deletedExpense;
   }
 
-  async getExpensesByDateRange(userId: string, petId: string | undefined, startDate: Date, endDate: Date): Promise<Expense[]> {
+  async getExpensesByDateRange(
+    userId: string,
+    petId: string | undefined,
+    startDate: Date,
+    endDate: Date
+  ): Promise<Expense[]> {
     const conditions = [
       eq(expenses.userId, userId),
-      between(expenses.date, startDate, endDate)
+      between(expenses.date, startDate, endDate),
     ];
 
     if (petId) {
@@ -148,7 +171,13 @@ export class ExpenseService {
       .orderBy(desc(expenses.date));
   }
 
-  async getExpenseStats(userId: string, petId?: string, startDate?: Date, endDate?: Date, category?: string): Promise<{
+  async getExpenseStats(
+    userId: string,
+    petId?: string,
+    startDate?: Date,
+    endDate?: Date,
+    category?: string
+  ): Promise<{
     total: number;
     count: number;
     average: number;
@@ -225,7 +254,12 @@ export class ExpenseService {
     };
   }
 
-  async getMonthlyExpenses(userId: string, petId?: string, year?: number, month?: number): Promise<Expense[]> {
+  async getMonthlyExpenses(
+    userId: string,
+    petId?: string,
+    year?: number,
+    month?: number
+  ): Promise<Expense[]> {
     const now = new Date();
     const targetYear = year || now.getFullYear();
     const targetMonth = month !== undefined ? month : now.getMonth();
@@ -236,7 +270,11 @@ export class ExpenseService {
     return this.getExpensesByDateRange(userId, petId, startDate, endDate);
   }
 
-  async getYearlyExpenses(userId: string, petId?: string, year?: number): Promise<Expense[]> {
+  async getYearlyExpenses(
+    userId: string,
+    petId?: string,
+    year?: number
+  ): Promise<Expense[]> {
     const now = new Date();
     const targetYear = year || now.getFullYear();
 
@@ -246,10 +284,14 @@ export class ExpenseService {
     return this.getExpensesByDateRange(userId, petId, startDate, endDate);
   }
 
-  async getExpensesByCategory(userId: string, category: string, petId?: string): Promise<Expense[]> {
+  async getExpensesByCategory(
+    userId: string,
+    category: string,
+    petId?: string
+  ): Promise<Expense[]> {
     const conditions = [
       eq(expenses.userId, userId),
-      eq(expenses.category, category)
+      eq(expenses.category, category),
     ];
 
     if (petId) {
@@ -263,7 +305,12 @@ export class ExpenseService {
       .orderBy(desc(expenses.date));
   }
 
-  async exportExpensesCSV(userId: string, petId?: string, startDate?: Date, endDate?: Date): Promise<string> {
+  async exportExpensesCSV(
+    userId: string,
+    petId?: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<string> {
     const conditions = [eq(expenses.userId, userId)];
 
     if (petId) {
@@ -287,7 +334,18 @@ export class ExpenseService {
       .orderBy(desc(expenses.date));
 
     // Generate CSV
-    const headers = ['ID', 'Pet ID', 'Category', 'Amount', 'Currency', 'Payment Method', 'Description', 'Date', 'Vendor', 'Notes'];
+    const headers = [
+      'ID',
+      'Pet ID',
+      'Category',
+      'Amount',
+      'Currency',
+      'Payment Method',
+      'Description',
+      'Date',
+      'Vendor',
+      'Notes',
+    ];
     const rows = expenseList.map(expense => [
       expense.id,
       expense.petId,

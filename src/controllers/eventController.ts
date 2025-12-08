@@ -1,8 +1,12 @@
-import { Response, NextFunction } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { EventService } from '../services/eventService';
-import { successResponse, getPaginationParams } from '../utils/response';
-import { CreateEventRequest, UpdateEventRequest, EventQueryParams } from '../types/api';
+import { getPaginationParams, successResponse } from '../utils/response';
+import {
+  CreateEventRequest,
+  EventQueryParams,
+  UpdateEventRequest,
+} from '../types/api';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
 
@@ -14,7 +18,11 @@ export class EventController {
   }
 
   // GET /api/events OR /api/pets/:petId/events - Get events for authenticated user
-  getEventsByPetId = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getEventsByPetId = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const petId = req.params.petId || (req.query.petId as string);
@@ -25,8 +33,17 @@ export class EventController {
         endDate: req.query.endDate as string,
       };
 
-      const { events, total } = await this.eventService.getEventsByPetId(userId, petId, params);
-      const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };
+      const { events, total } = await this.eventService.getEventsByPetId(
+        userId,
+        petId,
+        params
+      );
+      const meta = {
+        total,
+        page: params.page!,
+        limit: params.limit!,
+        totalPages: Math.ceil(total / params.limit!),
+      };
 
       successResponse(res, events, 200, meta);
     } catch (error) {
@@ -35,7 +52,11 @@ export class EventController {
   };
 
   // GET /api/events/calendar/:date - Get events for a specific date
-  getEventsByDate = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getEventsByDate = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { date } = req.params;
@@ -48,8 +69,17 @@ export class EventController {
         throw createError('Date is required', 400, 'MISSING_DATE');
       }
 
-      const { events, total } = await this.eventService.getEventsByDate(userId, date, params);
-      const meta = { total, page: params.page!, limit: params.limit!, totalPages: Math.ceil(total / params.limit!) };
+      const { events, total } = await this.eventService.getEventsByDate(
+        userId,
+        date,
+        params
+      );
+      const meta = {
+        total,
+        page: params.page!,
+        limit: params.limit!,
+        totalPages: Math.ceil(total / params.limit!),
+      };
 
       successResponse(res, events, 200, meta);
     } catch (error) {
@@ -58,7 +88,11 @@ export class EventController {
   };
 
   // GET /api/events/:id - Get event by ID
-  getEventById = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getEventById = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -80,24 +114,40 @@ export class EventController {
   };
 
   // POST /api/events - Create new event
-  createEvent = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  createEvent = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const eventData: CreateEventRequest = req.body;
 
       // Validation
-      if (!eventData.petId || !eventData.title || !eventData.type || !eventData.startTime) {
-        throw createError('Pet ID, title, type, and start time are required', 400, 'MISSING_REQUIRED_FIELDS');
+      if (
+        !eventData.petId ||
+        !eventData.title ||
+        !eventData.type ||
+        !eventData.startTime
+      ) {
+        throw createError(
+          'Pet ID, title, type, and start time are required',
+          400,
+          'MISSING_REQUIRED_FIELDS'
+        );
       }
 
       // Convert string dates to UTC Date objects
       const convertedEventData = {
         ...eventData,
         startTime: parseUTCDate(eventData.startTime),
-        ...(eventData.endTime && { endTime: parseUTCDate(eventData.endTime) })
+        ...(eventData.endTime && { endTime: parseUTCDate(eventData.endTime) }),
       };
 
-      const event = await this.eventService.createEvent(userId, convertedEventData as any);
+      const event = await this.eventService.createEvent(
+        userId,
+        convertedEventData as any
+      );
       successResponse(res, event, 201);
     } catch (error) {
       next(error);
@@ -105,7 +155,11 @@ export class EventController {
   };
 
   // PUT /api/events/:id - Update event
-  updateEvent = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  updateEvent = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -118,11 +172,17 @@ export class EventController {
       // Convert string dates to UTC Date objects
       const convertedUpdates = {
         ...updates,
-        ...(updates.startTime && { startTime: parseUTCDate(updates.startTime) }),
-        ...(updates.endTime && { endTime: parseUTCDate(updates.endTime) })
+        ...(updates.startTime && {
+          startTime: parseUTCDate(updates.startTime),
+        }),
+        ...(updates.endTime && { endTime: parseUTCDate(updates.endTime) }),
       };
 
-      const event = await this.eventService.updateEvent(userId, id, convertedUpdates as any);
+      const event = await this.eventService.updateEvent(
+        userId,
+        id,
+        convertedUpdates as any
+      );
 
       if (!event) {
         throw createError('Event not found', 404, 'EVENT_NOT_FOUND');
@@ -135,7 +195,11 @@ export class EventController {
   };
 
   // DELETE /api/events/:id - Delete event
-  deleteEvent = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  deleteEvent = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -157,12 +221,20 @@ export class EventController {
   };
 
   // GET /api/events/upcoming - Get upcoming events
-  getUpcomingEvents = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getUpcomingEvents = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const petId = req.query.petId as string;
       const days = parseInt(req.query.days as string) || 7;
-      const events = await this.eventService.getUpcomingEvents(userId, petId, days);
+      const events = await this.eventService.getUpcomingEvents(
+        userId,
+        petId,
+        days
+      );
       successResponse(res, events);
     } catch (error) {
       next(error);
@@ -170,7 +242,11 @@ export class EventController {
   };
 
   // GET /api/events/today - Get today's events
-  getTodayEvents = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  getTodayEvents = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = req.user!.id;
       const petId = req.query.petId as string;

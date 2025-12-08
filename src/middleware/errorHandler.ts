@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
 export interface ApiError extends Error {
   statusCode: number;
@@ -37,7 +37,12 @@ export const errorHandler = (
   });
 };
 
-export const createError = (message: string, statusCode: number = 500, code?: string, details?: any): ApiError => {
+export const createError = (
+  message: string,
+  statusCode = 500,
+  code?: string,
+  details?: any
+): ApiError => {
   const error = new Error(message) as ApiError;
   error.statusCode = statusCode;
   error.code = code;

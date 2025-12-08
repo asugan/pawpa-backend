@@ -22,7 +22,9 @@ const createEventSchema = z.object({
 const updateEventSchema = createEventSchema.partial();
 
 const dateParamSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (expected YYYY-MM-DD)'),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (expected YYYY-MM-DD)'),
 });
 
 // Routes
@@ -30,7 +32,8 @@ router.get('/upcoming', eventController.getUpcomingEvents);
 
 router.get('/today', eventController.getTodayEvents);
 
-router.get('/calendar/:date',
+router.get(
+  '/calendar/:date',
   validateRequest(dateParamSchema, 'params'),
   eventController.getEventsByDate
 );
@@ -39,9 +42,17 @@ router.get('/', eventController.getEventsByPetId);
 
 router.get('/:id', eventController.getEventById);
 
-router.post('/', validateRequest(createEventSchema), eventController.createEvent);
+router.post(
+  '/',
+  validateRequest(createEventSchema),
+  eventController.createEvent
+);
 
-router.put('/:id', validateRequest(updateEventSchema), eventController.updateEvent);
+router.put(
+  '/:id',
+  validateRequest(updateEventSchema),
+  eventController.updateEvent
+);
 
 router.delete('/:id', eventController.deleteEvent);
 

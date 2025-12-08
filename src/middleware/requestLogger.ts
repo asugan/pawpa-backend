@@ -9,7 +9,8 @@ morgan.token('body', (req: Request) => {
   return '-';
 });
 
-const format = ':method :url :status :res[content-length] - :response-time ms :body';
+const format =
+  ':method :url :status :res[content-length] - :response-time ms :body';
 
 export const requestLogger = morgan(format, {
   skip: (req: Request, res: Response) => {

@@ -34,7 +34,11 @@ router.put('/:id', validateRequest(updatePetSchema), petController.updatePet);
 
 router.delete('/:id', petController.deletePet);
 
-router.post('/:id/photo', validateRequest(updatePhotoSchema), petController.updatePetPhoto);
+router.post(
+  '/:id/photo',
+  validateRequest(updatePhotoSchema),
+  petController.updatePetPhoto
+);
 
 // Health records sub-routes
 router.get('/:id/health-records', petController.getPetHealthRecords);

@@ -9,7 +9,15 @@ const healthRecordController = new HealthRecordController();
 // Validation schemas
 const createHealthRecordSchema = z.object({
   petId: z.string().min(1, 'Pet ID is required'),
-  type: z.enum(['vaccination', 'checkup', 'medication', 'surgery', 'dental', 'grooming', 'other']),
+  type: z.enum([
+    'vaccination',
+    'checkup',
+    'medication',
+    'surgery',
+    'dental',
+    'grooming',
+    'other',
+  ]),
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   date: z.string().datetime('Invalid date format'),
@@ -50,9 +58,17 @@ router.get('/', (req: any, res: any, next: any) => {
 
 router.get('/:id', healthRecordController.getHealthRecordById);
 
-router.post('/', validateRequest(createHealthRecordSchema), healthRecordController.createHealthRecord);
+router.post(
+  '/',
+  validateRequest(createHealthRecordSchema),
+  healthRecordController.createHealthRecord
+);
 
-router.put('/:id', validateRequest(updateHealthRecordSchema), healthRecordController.updateHealthRecord);
+router.put(
+  '/:id',
+  validateRequest(updateHealthRecordSchema),
+  healthRecordController.updateHealthRecord
+);
 
 router.delete('/:id', healthRecordController.deleteHealthRecord);
 

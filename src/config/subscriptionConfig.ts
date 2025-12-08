@@ -18,9 +18,12 @@ export const SUBSCRIPTION_TIERS = {
   PRO: 'pro',
 } as const;
 
-export type SubscriptionProvider = (typeof SUBSCRIPTION_PROVIDERS)[keyof typeof SUBSCRIPTION_PROVIDERS];
-export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[keyof typeof SUBSCRIPTION_STATUSES];
-export type SubscriptionTier = (typeof SUBSCRIPTION_TIERS)[keyof typeof SUBSCRIPTION_TIERS];
+export type SubscriptionProvider =
+  (typeof SUBSCRIPTION_PROVIDERS)[keyof typeof SUBSCRIPTION_PROVIDERS];
+export type SubscriptionStatus =
+  (typeof SUBSCRIPTION_STATUSES)[keyof typeof SUBSCRIPTION_STATUSES];
+export type SubscriptionTier =
+  (typeof SUBSCRIPTION_TIERS)[keyof typeof SUBSCRIPTION_TIERS];
 
 export const SUBSCRIPTION_CONFIG = {
   /** Trial duration in days */
@@ -42,7 +45,9 @@ export const SUBSCRIPTION_CONFIG = {
    */
   getTrialEndDate: (startDate: Date = new Date()): Date => {
     const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + SUBSCRIPTION_CONFIG.TRIAL_DURATION_DAYS);
+    endDate.setDate(
+      endDate.getDate() + SUBSCRIPTION_CONFIG.TRIAL_DURATION_DAYS
+    );
     return endDate;
   },
 

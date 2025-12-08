@@ -14,7 +14,7 @@ export function parseUTCDate(dateString: string): Date {
   // Ensure the date string is treated as UTC
   if (!dateString.endsWith('Z') && !dateString.includes('+')) {
     // Add Z to force UTC parsing
-    return new Date(dateString + 'Z');
+    return new Date(`${dateString}Z`);
   }
   return new Date(dateString);
 }
@@ -62,8 +62,14 @@ export function normalizeDatesToUTC<T extends Record<string, any>>(
   for (const field of dateFields) {
     if (normalized[field]) {
       if (typeof normalized[field] === 'string') {
-        normalized[field] = toUTCISOString(parseUTCDate(normalized[field])) as T[keyof T];
-      } else if (normalized[field] && typeof normalized[field] === 'object' && 'toISOString' in normalized[field]) {
+        normalized[field] = toUTCISOString(
+          parseUTCDate(normalized[field])
+        ) as T[keyof T];
+      } else if (
+        normalized[field] &&
+        typeof normalized[field] === 'object' &&
+        'toISOString' in normalized[field]
+      ) {
         normalized[field] = toUTCISOString(normalized[field]) as T[keyof T];
       }
     }
@@ -88,10 +94,12 @@ export function dateJSONReplacer(key: string, value: any): any {
   }
 
   // Handle ISO date strings that might not be in UTC
-  if (typeof value === 'string' &&
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value) &&
-      !value.endsWith('Z')) {
-    return toUTCISOString(new Date(value + 'Z'));
+  if (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value) &&
+    !value.endsWith('Z')
+  ) {
+    return toUTCISOString(new Date(`${value}Z`));
   }
 
   return value;
@@ -103,12 +111,12 @@ export function dateJSONReplacer(key: string, value: any): any {
  * @returns Object with UTC start and end of day timestamps
  */
 export function createUTCDateFilter(dateStr: string) {
-  const startDate = new Date(dateStr + 'T00:00:00.000Z');
-  const endDate = new Date(dateStr + 'T23:59:59.999Z');
+  const startDate = new Date(`${dateStr}T00:00:00.000Z`);
+  const endDate = new Date(`${dateStr}T23:59:59.999Z`);
 
   return {
     gte: startDate.getTime(),
-    lte: endDate.getTime()
+    lte: endDate.getTime(),
   };
 }
 
