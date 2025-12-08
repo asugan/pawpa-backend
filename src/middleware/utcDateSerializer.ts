@@ -14,12 +14,12 @@ export const utcDateSerializer = (
   const originalJson = res.json;
 
   // Override the json method
-  res.json = function (data: any) {
+  res.json = function (data: unknown) {
     // Stringify with our custom replacer that normalizes dates to UTC
     const jsonString = JSON.stringify(data, dateJSONReplacer);
 
     // Parse it back to maintain same format as original
-    const parsedData = JSON.parse(jsonString);
+    const parsedData = JSON.parse(jsonString) as unknown;
 
     // Call the original json method with normalized data
     return originalJson.call(this, parsedData);

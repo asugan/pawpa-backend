@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { auth } from '../lib/auth';
 import { fromNodeHeaders } from 'better-auth/node';
+import { createError } from './errorHandler';
 
 /**
  * Extended Request interface with authenticated user data
@@ -57,6 +58,7 @@ export async function requireAuth(
     req.session = session.session;
     next();
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Auth middleware error:', error);
     res.status(401).json({
       success: false,
@@ -92,3 +94,30 @@ export async function optionalAuth(
     next();
   }
 }
+
+/**
+ * Helper function to get authenticated user ID with proper error handling
+ * @param req - AuthenticatedRequest object
+ * @returns User ID string
+ * @throws Error if user is not authenticated
+ */
+export const requireAuth = (req: AuthenticatedRequest): string => {
+  if (!req.user?.id) {
+    throw createError('Authentication required', 401, 'UNAUTHORIZED');
+  }
+  return req.user.id;
+};
+
+/**
+ * Helper function to get parameter from request with proper error handling
+ * @param param - Parameter value from req.params or req.query
+ * @param paramName - Name of the parameter for error messages
+ * @returns Parameter value
+ * @throws Error if parameter is missing
+ */
+export const requireParam = (param: string | undefined, paramName: string): string => {
+  if (!param) {
+    throw createError(`${paramName} is required`, 400, 'BAD_REQUEST');
+  }
+  return param;
+};

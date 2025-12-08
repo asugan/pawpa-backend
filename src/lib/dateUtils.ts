@@ -34,7 +34,7 @@ export function toUTCISOString(date: Date): string {
  * @returns Date-only string in YYYY-MM-DD format
  */
 export function toUTCDateString(date: Date): string {
-  return date.toISOString().split('T')[0] || '';
+  return date.toISOString().split('T')[0] ?? '';
 }
 
 /**
@@ -53,7 +53,7 @@ export function parseAsUTCDate(dateString: string): string {
  * @param dateFields - Array of field names that contain dates
  * @returns Object with normalized date fields
  */
-export function normalizeDatesToUTC<T extends Record<string, any>>(
+export function normalizeDatesToUTC<T extends Record<string, unknown>>(
   obj: T,
   dateFields: (keyof T)[]
 ): T {
@@ -82,7 +82,7 @@ export function normalizeDatesToUTC<T extends Record<string, any>>(
  * Convert JSON response to ensure all dates are in UTC format
  * This can be used as a JSON replacer
  */
-export function dateJSONReplacer(key: string, value: any): any {
+export function dateJSONReplacer(key: string, value: unknown): unknown {
   if (value instanceof Date) {
     return toUTCISOString(value);
   }

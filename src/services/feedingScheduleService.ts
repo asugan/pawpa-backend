@@ -1,4 +1,4 @@
-import { and, count, desc, eq, like } from 'drizzle-orm';
+import { and, count, eq, like } from 'drizzle-orm';
 import { db, feedingSchedules, pets } from '../config/database';
 import { FeedingScheduleQueryParams } from '../types/api';
 import { FeedingSchedule, NewFeedingSchedule } from '../models/schema';
@@ -14,7 +14,7 @@ export class FeedingScheduleService {
     petId?: string,
     params?: FeedingScheduleQueryParams
   ): Promise<{ schedules: FeedingSchedule[]; total: number }> {
-    const { page = 1, limit = 10, isActive, foodType } = params || {};
+    const { page = 1, limit = 10, isActive, foodType } = params ?? {};
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
@@ -41,7 +41,7 @@ export class FeedingScheduleService {
       .from(feedingSchedules)
       .where(whereClause);
 
-    const total = result[0]?.total || 0;
+    const total = result[0]?.total ?? 0;
 
     // Get schedules with pagination
     const schedules = await db
@@ -72,7 +72,7 @@ export class FeedingScheduleService {
         and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId))
       );
 
-    return schedule || null;
+    return schedule ?? null;
   }
 
   /**
@@ -120,7 +120,8 @@ export class FeedingScheduleService {
     updates: Partial<NewFeedingSchedule>
   ): Promise<FeedingSchedule | null> {
     // Don't allow updating userId
-    const { userId: _, ...safeUpdates } = updates as any;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { userId: _userId, ...safeUpdates } = updates;
 
     const [updatedSchedule] = await db
       .update(feedingSchedules)
@@ -130,7 +131,7 @@ export class FeedingScheduleService {
       )
       .returning();
 
-    return updatedSchedule || null;
+    return updatedSchedule ?? null;
   }
 
   /**
@@ -237,10 +238,6 @@ export class FeedingScheduleService {
       conditions.push(eq(feedingSchedules.petId, petId));
     }
 
-    // Using UTC time for consistency. TODO: Consider user's local timezone in future
-    const currentTime = new Date(toUTCISOString(new Date()))
-      .toTimeString()
-      .slice(0, 5); // HH:MM format
 
     const [schedule] = await db
       .select()
@@ -249,6 +246,6 @@ export class FeedingScheduleService {
       .orderBy(feedingSchedules.time)
       .limit(1);
 
-    return schedule || null;
+    return schedule ?? null;
   }
 }

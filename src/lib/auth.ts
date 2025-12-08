@@ -19,17 +19,17 @@ export const auth = betterAuth({
   /*
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
     },
     apple: {
-      clientId: process.env.APPLE_CLIENT_ID || '',
-      clientSecret: process.env.APPLE_CLIENT_SECRET || '',
+      clientId: process.env.APPLE_CLIENT_ID ?? '',
+      clientSecret: process.env.APPLE_CLIENT_SECRET ?? '',
     },
   },
   */
   trustedOrigins: [
-    process.env.CORS_ORIGIN || 'http://localhost:3001',
+    process.env.CORS_ORIGIN ?? 'http://localhost:3001',
     'https://appleid.apple.com',
     'pawpa://', // Mobile app deep link
     'exp://', // Expo Go development

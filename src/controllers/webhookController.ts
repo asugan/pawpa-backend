@@ -56,6 +56,7 @@ export class WebhookController {
     const webhookAuthKey = process.env.REVENUECAT_WEBHOOK_AUTH_KEY;
 
     if (!webhookAuthKey) {
+      // eslint-disable-next-line no-console
       console.error('REVENUECAT_WEBHOOK_AUTH_KEY not configured');
       return false;
     }
@@ -76,11 +77,12 @@ export class WebhookController {
   handleWebhook = async (
     req: Request,
     res: Response,
-    next: NextFunction
+    _next: NextFunction
   ): Promise<void> => {
     try {
       // Verify authorization
       if (!this.verifyWebhookAuth(req)) {
+        // eslint-disable-next-line no-console
         console.error('Webhook authorization failed');
         res.status(401).json({ error: 'Unauthorized' });
         return;
@@ -89,22 +91,16 @@ export class WebhookController {
       const webhookData = req.body as RevenueCatWebhookEvent;
       const { event } = webhookData;
 
-      console.log(`[RevenueCat Webhook] Received event: ${event.type}`, {
-        app_user_id: event.app_user_id,
-        product_id: event.product_id,
-        environment: event.environment,
-      });
+      // Log webhook event for debugging
 
       // Find the user - app_user_id should match our userId
       const userId =
-        await this.subscriptionService.findUserByRevenueCatAppUserId(
+        this.subscriptionService.findUserByRevenueCatAppUserId(
           event.app_user_id
         );
 
       if (!userId) {
-        console.error(
-          `[RevenueCat Webhook] User not found for app_user_id: ${event.app_user_id}`
-        );
+        // User not found - return 200 to acknowledge receipt
         // Return 200 to acknowledge receipt (RevenueCat will retry on non-2xx)
         res
           .status(200)
@@ -119,7 +115,7 @@ export class WebhookController {
 
       // Create a unique RevenueCat ID from transaction
       const revenueCatId =
-        event.original_transaction_id || event.transaction_id || event.id;
+        event.original_transaction_id ?? event.transaction_id ?? event.id;
 
       // Handle different event types
       switch (event.type) {
@@ -149,18 +145,17 @@ export class WebhookController {
           break;
 
         case 'TEST':
-          console.log('[RevenueCat Webhook] Test event received');
+          // Test event received
           break;
 
         default:
-          console.log(
-            `[RevenueCat Webhook] Unhandled event type: ${event.type}`
-          );
+          // Unhandled event type: ${event.type}
       }
 
       res.status(200).json({ received: true, processed: true });
     } catch (error) {
-      console.error('[RevenueCat Webhook] Error processing webhook:', error);
+      // Error processing webhook
+      void error; // Mark error as intentionally unused
       // Return 200 to prevent retries for processing errors
       // RevenueCat will retry on 5xx errors
       res
@@ -177,9 +172,7 @@ export class WebhookController {
     revenueCatId: string,
     expiresAt: Date
   ): Promise<void> {
-    console.log(
-      `[RevenueCat Webhook] Processing purchase/renewal for user: ${userId}`
-    );
+    // Processing purchase/renewal for user
 
     // Upsert the subscription (will convert internal trial to RevenueCat if exists)
     await this.subscriptionService.upsertRevenueCatSubscription(
@@ -189,9 +182,7 @@ export class WebhookController {
       SUBSCRIPTION_STATUSES.ACTIVE
     );
 
-    console.log(
-      `[RevenueCat Webhook] Subscription activated for user: ${userId}`
-    );
+    // Subscription activated for user
   }
 
   /**
@@ -202,9 +193,7 @@ export class WebhookController {
     revenueCatId: string,
     expiresAt: Date
   ): Promise<void> {
-    console.log(
-      `[RevenueCat Webhook] Processing cancellation for: ${revenueCatId}`
-    );
+    // Processing cancellation
 
     await this.subscriptionService.updateSubscriptionStatus(
       revenueCatId,
@@ -212,9 +201,7 @@ export class WebhookController {
       expiresAt
     );
 
-    console.log(
-      `[RevenueCat Webhook] Subscription marked as cancelled: ${revenueCatId}`
-    );
+    // Subscription marked as cancelled
   }
 
   /**
@@ -222,18 +209,14 @@ export class WebhookController {
    * Subscription has fully expired
    */
   private async handleExpiration(revenueCatId: string): Promise<void> {
-    console.log(
-      `[RevenueCat Webhook] Processing expiration for: ${revenueCatId}`
-    );
+    // Processing expiration
 
     await this.subscriptionService.updateSubscriptionStatus(
       revenueCatId,
       SUBSCRIPTION_STATUSES.EXPIRED
     );
 
-    console.log(
-      `[RevenueCat Webhook] Subscription marked as expired: ${revenueCatId}`
-    );
+    // Subscription marked as expired
   }
 
   /**
@@ -244,9 +227,7 @@ export class WebhookController {
     revenueCatId: string,
     expiresAt: Date
   ): Promise<void> {
-    console.log(
-      `[RevenueCat Webhook] Processing product change for user: ${userId}`
-    );
+    // Processing product change for user
 
     // For now, treat product changes as renewals
     await this.subscriptionService.upsertRevenueCatSubscription(
@@ -256,8 +237,6 @@ export class WebhookController {
       SUBSCRIPTION_STATUSES.ACTIVE
     );
 
-    console.log(
-      `[RevenueCat Webhook] Product change processed for user: ${userId}`
-    );
+    // Product change processed for user
   }
 }

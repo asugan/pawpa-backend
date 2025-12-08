@@ -13,7 +13,7 @@ const format =
   ':method :url :status :res[content-length] - :response-time ms :body';
 
 export const requestLogger = morgan(format, {
-  skip: (req: Request, res: Response) => {
+  skip: (req: Request, _res: Response) => {
     // Skip logging for health checks in production
     return process.env.NODE_ENV === 'production' && req.url === '/health';
   },

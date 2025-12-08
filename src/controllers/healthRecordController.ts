@@ -1,5 +1,5 @@
 import { NextFunction, Response } from 'express';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import { HealthRecordService } from '../services/healthRecordService';
 import { getPaginationParams, successResponse } from '../utils/response';
 import {
@@ -24,7 +24,7 @@ export class HealthRecordController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string | undefined;
       const params: HealthRecordQueryParams = {
         ...getPaginationParams(req.query),
@@ -39,11 +39,13 @@ export class HealthRecordController {
           petId,
           params
         );
+      const page = params.page ?? 1;
+      const limit = params.limit ?? 10;
       const meta = {
         total,
-        page: params.page!,
-        limit: params.limit!,
-        totalPages: Math.ceil(total / params.limit!),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
       successResponse(res, records, 200, meta);
     } catch (error) {
@@ -58,8 +60,8 @@ export class HealthRecordController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
-      const petId = req.params.petId || (req.query.petId as string);
+      const userId = requireAuth(req);
+      const petId = req.params.petId ?? (req.query.petId as string);
       const params: HealthRecordQueryParams = {
         ...getPaginationParams(req.query),
         type: req.query.type as string,
@@ -73,11 +75,13 @@ export class HealthRecordController {
           petId,
           params
         );
+      const page = params.page ?? 1;
+      const limit = params.limit ?? 10;
       const meta = {
         total,
-        page: params.page!,
-        limit: params.limit!,
-        totalPages: Math.ceil(total / params.limit!),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
 
       successResponse(res, records, 200, meta);
@@ -93,7 +97,7 @@ export class HealthRecordController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -126,8 +130,8 @@ export class HealthRecordController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
-      const recordData: CreateHealthRecordRequest = req.body;
+      const userId = requireAuth(req);
+      const recordData = req.body as CreateHealthRecordRequest;
 
       // Validation
       if (
@@ -154,7 +158,7 @@ export class HealthRecordController {
 
       const record = await this.healthRecordService.createHealthRecord(
         userId,
-        convertedRecordData as any
+        convertedRecordData
       );
       successResponse(res, record, 201);
     } catch (error) {
@@ -169,9 +173,9 @@ export class HealthRecordController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
-      const updates: UpdateHealthRecordRequest = req.body;
+      const updates = req.body as UpdateHealthRecordRequest;
 
       if (!id) {
         throw createError('Health record ID is required', 400, 'MISSING_ID');
@@ -189,7 +193,7 @@ export class HealthRecordController {
       const record = await this.healthRecordService.updateHealthRecord(
         userId,
         id,
-        convertedUpdates as any
+        convertedUpdates
       );
 
       if (!record) {
@@ -213,7 +217,7 @@ export class HealthRecordController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -246,7 +250,7 @@ export class HealthRecordController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const vaccinations =
         await this.healthRecordService.getUpcomingVaccinations(userId, petId);

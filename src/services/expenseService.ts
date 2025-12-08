@@ -1,4 +1,4 @@
-import { and, between, count, desc, eq, gte, lte, sql, sum } from 'drizzle-orm';
+import { and, between, count, desc, eq, gte, lte, sum } from 'drizzle-orm';
 import { db, expenses, pets } from '../config/database';
 import { ExpenseQueryParams } from '../types/api';
 import { Expense, NewExpense } from '../models/schema';
@@ -20,7 +20,7 @@ export class ExpenseService {
       maxAmount,
       currency,
       paymentMethod,
-    } = params || {};
+    } = params ?? {};
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
@@ -67,7 +67,7 @@ export class ExpenseService {
       .from(expenses)
       .where(whereClause);
 
-    const total = result[0]?.total || 0;
+    const total = result[0]?.total ?? 0;
 
     // Get expenses with pagination
     const expenseList = await db
@@ -90,7 +90,7 @@ export class ExpenseService {
       .from(expenses)
       .where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
 
-    return expense || null;
+    return expense ?? null;
   }
 
   async createExpense(
@@ -129,7 +129,8 @@ export class ExpenseService {
     updates: Partial<NewExpense>
   ): Promise<Expense | null> {
     // Don't allow updating userId
-    const { userId: _, ...safeUpdates } = updates as any;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { userId: _userId, ...safeUpdates } = updates;
 
     const [updatedExpense] = await db
       .update(expenses)
@@ -137,7 +138,7 @@ export class ExpenseService {
       .where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
       .returning();
 
-    return updatedExpense || null;
+    return updatedExpense ?? null;
   }
 
   async deleteExpense(userId: string, id: string): Promise<boolean> {
@@ -213,8 +214,8 @@ export class ExpenseService {
       .from(expenses)
       .where(whereClause);
 
-    const total = Number(totalResult[0]?.total || 0);
-    const expenseCount = totalResult[0]?.count || 0;
+    const total = Number(totalResult[0]?.total ?? 0);
+    const expenseCount = totalResult[0]?.count ?? 0;
     const average = expenseCount > 0 ? total / expenseCount : 0;
 
     // Get stats by category
@@ -244,12 +245,12 @@ export class ExpenseService {
       average,
       byCategory: byCategory.map(item => ({
         category: item.category,
-        total: Number(item.total || 0),
+        total: Number(item.total ?? 0),
         count: item.count,
       })),
       byCurrency: byCurrency.map(item => ({
         currency: item.currency,
-        total: Number(item.total || 0),
+        total: Number(item.total ?? 0),
       })),
     };
   }
@@ -261,8 +262,8 @@ export class ExpenseService {
     month?: number
   ): Promise<Expense[]> {
     const now = new Date();
-    const targetYear = year || now.getFullYear();
-    const targetMonth = month !== undefined ? month : now.getMonth();
+    const targetYear = year ?? now.getFullYear();
+    const targetMonth = month ?? now.getMonth();
 
     const startDate = new Date(targetYear, targetMonth, 1);
     const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
@@ -276,7 +277,7 @@ export class ExpenseService {
     year?: number
   ): Promise<Expense[]> {
     const now = new Date();
-    const targetYear = year || now.getFullYear();
+    const targetYear = year ?? now.getFullYear();
 
     const startDate = new Date(targetYear, 0, 1);
     const endDate = new Date(targetYear, 11, 31, 23, 59, 59, 999);
@@ -352,11 +353,11 @@ export class ExpenseService {
       expense.category,
       expense.amount.toString(),
       expense.currency,
-      expense.paymentMethod || '',
-      expense.description || '',
+      expense.paymentMethod ?? '',
+      expense.description ?? '',
       expense.date.toISOString(),
-      expense.vendor || '',
-      expense.notes || '',
+      expense.vendor ?? '',
+      expense.notes ?? '',
     ]);
 
     const csvContent = [

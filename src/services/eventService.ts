@@ -4,7 +4,6 @@ import { EventQueryParams } from '../types/api';
 import { Event, NewEvent } from '../models/schema';
 import { generateId } from '../utils/id';
 import {
-  createUTCDateFilter,
   getUTCTodayBoundaries,
   parseUTCDate,
 } from '../lib/dateUtils';
@@ -18,7 +17,7 @@ export class EventService {
     petId?: string,
     params?: EventQueryParams
   ): Promise<{ events: Event[]; total: number }> {
-    const { page = 1, limit = 10, type, startDate, endDate } = params || {};
+    const { page = 1, limit = 10, type, startDate, endDate } = params ?? {};
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
@@ -48,7 +47,7 @@ export class EventService {
       .from(events)
       .where(whereClause);
 
-    const total = result[0]?.total || 0;
+    const total = result[0]?.total ?? 0;
 
     // Get events with pagination
     const eventsList = await db
@@ -100,7 +99,7 @@ export class EventService {
       .from(events)
       .where(whereClause);
 
-    const total = result[0]?.total || 0;
+    const total = result[0]?.total ?? 0;
 
     // Get events with pagination
     const eventsList = await db
@@ -126,7 +125,7 @@ export class EventService {
       .from(events)
       .where(and(eq(events.id, id), eq(events.userId, userId)));
 
-    return event || null;
+    return event ?? null;
   }
 
   /**
@@ -171,7 +170,8 @@ export class EventService {
     updates: Partial<NewEvent>
   ): Promise<Event | null> {
     // Don't allow updating userId
-    const { userId: _, ...safeUpdates } = updates as any;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { userId: _userId, ...safeUpdates } = updates;
 
     const [updatedEvent] = await db
       .update(events)
@@ -179,7 +179,7 @@ export class EventService {
       .where(and(eq(events.id, id), eq(events.userId, userId)))
       .returning();
 
-    return updatedEvent || null;
+    return updatedEvent ?? null;
   }
 
   /**

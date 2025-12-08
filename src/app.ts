@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import helmet from 'helmet';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './lib/auth';
@@ -35,20 +35,20 @@ app.use(requestLogger);
 app.use(utcDateSerializer);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({
     success: true,
     data: {
       status: 'OK',
       timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development',
+      version: process.env.npm_package_version ?? '1.0.0',
+      environment: process.env.NODE_ENV ?? 'development',
     },
   });
 });
 
 // API info endpoint
-app.get('/api', (req, res) => {
+app.get('/api', (_req: Request, res: Response) => {
   res.json({
     success: true,
     data: {

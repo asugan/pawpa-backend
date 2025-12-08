@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { ParsedQs } from 'qs';
 import { ApiResponse, PaginationMeta } from '../types/api';
 
 export const successResponse = <T>(
@@ -20,10 +21,11 @@ export const errorResponse = (
   code: string,
   message: string,
   statusCode = 400,
-  details?: any
+  details?: unknown
 ): Response => {
-  const response: ApiResponse = {
+  const response: ApiResponse<unknown> = {
     success: false,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     error: {
       code,
       message,
@@ -48,10 +50,10 @@ export const calculatePagination = (
 };
 
 export const getPaginationParams = (
-  query: any
+  query: ParsedQs
 ): { page: number; limit: number; offset: number } => {
-  const page = Math.max(1, parseInt(query.page) || 1);
-  const limit = Math.max(1, Math.min(100, parseInt(query.limit) || 10));
+  const page = Math.max(1, parseInt(query.page as string) ?? 1);
+  const limit = Math.max(1, Math.min(100, parseInt(query.limit as string) ?? 10));
   const offset = (page - 1) * limit;
   return { page, limit, offset };
 };

@@ -1,5 +1,5 @@
 import { NextFunction, Response } from 'express';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import { SubscriptionService } from '../services/subscriptionService';
 import { successResponse } from '../utils/response';
 import { createError } from '../middleware/errorHandler';
@@ -21,7 +21,7 @@ export class SubscriptionController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const deviceId = req.query.deviceId as string | undefined;
 
       const status = await this.subscriptionService.getSubscriptionStatus(
@@ -44,7 +44,7 @@ export class SubscriptionController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const deviceId = req.query.deviceId as string | undefined;
 
       const status = await this.subscriptionService.getSubscriptionStatus(
@@ -77,8 +77,8 @@ export class SubscriptionController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
-      const { deviceId } = req.body;
+      const userId = requireAuth(req);
+      const { deviceId } = req.body as { deviceId?: string };
 
       if (!deviceId) {
         throw createError('Device ID is required', 400, 'MISSING_DEVICE_ID');
@@ -139,7 +139,7 @@ export class SubscriptionController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { deviceId } = req.body;
+      const { deviceId } = req.body as { deviceId?: string };
 
       if (!deviceId) {
         throw createError('Device ID is required', 400, 'MISSING_DEVICE_ID');
@@ -163,7 +163,7 @@ export class SubscriptionController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
 
       const deactivated =
         await this.subscriptionService.expireInternalTrial(userId);

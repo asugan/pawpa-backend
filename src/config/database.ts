@@ -4,9 +4,9 @@ import * as schema from '../models/schema';
 
 // Create database directory if it doesn't exist
 import { mkdirSync } from 'fs';
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 
-const dbPath = process.env.DATABASE_URL || './data/pawpa.db';
+const dbPath = process.env.DATABASE_URL ?? './data/pawpa.db';
 const dbDir = dirname(dbPath);
 
 // Ensure data directory exists

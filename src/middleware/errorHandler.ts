@@ -3,18 +3,19 @@ import { NextFunction, Request, Response } from 'express';
 export interface ApiError extends Error {
   statusCode: number;
   code: string | undefined;
-  details: any;
+  details: unknown;
 }
 
 export const errorHandler = (
   err: ApiError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
-  const statusCode = err.statusCode || 500;
-  const code = err.code || 'INTERNAL_SERVER_ERROR';
+  const statusCode = err.statusCode ?? 500;
+  const code = err.code ?? 'INTERNAL_SERVER_ERROR';
 
+  // eslint-disable-next-line no-console
   console.error('Error:', {
     message: err.message,
     stack: err.stack,
@@ -41,7 +42,7 @@ export const createError = (
   message: string,
   statusCode = 500,
   code?: string,
-  details?: any
+  details?: unknown
 ): ApiError => {
   const error = new Error(message) as ApiError;
   error.statusCode = statusCode;

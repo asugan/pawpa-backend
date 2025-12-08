@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import { NextFunction, Response, Router } from 'express';
+import { AuthenticatedRequest } from '../middleware/auth';
 import { HealthRecordController } from '../controllers/healthRecordController';
 import { validateRequest } from '../middleware/validation';
 import { z } from 'zod';
@@ -47,7 +48,7 @@ router.get('/upcoming', healthRecordController.getUpcomingVaccinations);
 
 // GET / - If called as /api/health-records, use getAllHealthRecords (accepts petId as query param)
 // GET / - If called as /api/pets/:petId/health-records, use getHealthRecordsByPetId (gets petId from params)
-router.get('/', (req: any, res: any, next: any) => {
+router.get('/', (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   // Check if petId exists in params (nested route) or query (standalone route)
   if (req.params.petId) {
     return healthRecordController.getHealthRecordsByPetId(req, res, next);

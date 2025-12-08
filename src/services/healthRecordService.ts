@@ -3,7 +3,7 @@ import { db, healthRecords, pets } from '../config/database';
 import { HealthRecordQueryParams } from '../types/api';
 import { HealthRecord, NewHealthRecord } from '../models/schema';
 import { generateId } from '../utils/id';
-import { parseUTCDate, toUTCISOString } from '../lib/dateUtils';
+import { parseUTCDate } from '../lib/dateUtils';
 
 export class HealthRecordService {
   /**
@@ -14,7 +14,7 @@ export class HealthRecordService {
     petId?: string,
     params?: HealthRecordQueryParams
   ): Promise<{ records: HealthRecord[]; total: number }> {
-    const { page = 1, limit = 10, type, startDate, endDate } = params || {};
+    const { page = 1, limit = 10, type, startDate, endDate } = params ?? {};
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
@@ -44,7 +44,7 @@ export class HealthRecordService {
       .from(healthRecords)
       .where(whereClause);
 
-    const total = result[0]?.total || 0;
+    const total = result[0]?.total ?? 0;
 
     // Get records with pagination
     const records = await db
@@ -73,7 +73,7 @@ export class HealthRecordService {
       .from(healthRecords)
       .where(and(eq(healthRecords.id, id), eq(healthRecords.userId, userId)));
 
-    return record || null;
+    return record ?? null;
   }
 
   /**
@@ -118,7 +118,8 @@ export class HealthRecordService {
     updates: Partial<NewHealthRecord>
   ): Promise<HealthRecord | null> {
     // Don't allow updating userId
-    const { userId: _, ...safeUpdates } = updates as any;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { userId: _userId, ...safeUpdates } = updates;
 
     const [updatedRecord] = await db
       .update(healthRecords)
@@ -126,7 +127,7 @@ export class HealthRecordService {
       .where(and(eq(healthRecords.id, id), eq(healthRecords.userId, userId)))
       .returning();
 
-    return updatedRecord || null;
+    return updatedRecord ?? null;
   }
 
   /**

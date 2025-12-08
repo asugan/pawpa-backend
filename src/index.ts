@@ -4,13 +4,13 @@ import app from './app';
 // Load environment variables
 dotenv.config();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT ?? 3000;
 
-const startServer = async () => {
+const startServer = () => {
   try {
     const server = app.listen(PORT, () => {
       console.log(`🚀 PawPa Backend Server is running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV ?? 'development'}`);
       console.log(`🏥 Health check: http://localhost:${PORT}/health`);
       console.log(`📖 API docs: http://localhost:${PORT}/api`);
     });

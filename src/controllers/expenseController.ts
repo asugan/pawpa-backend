@@ -1,8 +1,7 @@
 import { NextFunction, Response } from 'express';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import { ExpenseService } from '../services/expenseService';
 import {
-  errorResponse,
   getPaginationParams,
   successResponse,
 } from '../utils/response';
@@ -11,7 +10,6 @@ import {
   ExpenseQueryParams,
   UpdateExpenseRequest,
 } from '../types/api';
-import { Expense } from '../models/schema';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
 
@@ -29,9 +27,9 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       // Support both URL params (/pets/:petId/expenses) and query string (/expenses?petId=...)
-      const petId = req.params.petId || (req.query.petId as string);
+      const petId = req.params.petId ?? (req.query.petId as string);
       const params: ExpenseQueryParams = {
         ...getPaginationParams(req.query),
         category: req.query.category as string,
@@ -52,11 +50,13 @@ export class ExpenseController {
         petId,
         params
       );
+      const page = params.page ?? 1;
+      const limit = params.limit ?? 10;
       const meta = {
         total,
-        page: params.page!,
-        limit: params.limit!,
-        totalPages: Math.ceil(total / params.limit!),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
 
       successResponse(res, expenses, 200, meta);
@@ -72,7 +72,7 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -98,8 +98,8 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
-      const expenseData: CreateExpenseRequest = req.body;
+      const userId = requireAuth(req);
+      const expenseData = req.body as CreateExpenseRequest;
 
       // Validation
       if (
@@ -120,7 +120,7 @@ export class ExpenseController {
       const expense = await this.expenseService.createExpense(userId, {
         ...expenseData,
         date: parseUTCDate(expenseData.date),
-      } as any);
+      });
 
       successResponse(res, expense, 201);
     } catch (error) {
@@ -135,16 +135,16 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
-      const updates: UpdateExpenseRequest = req.body;
+      const updates = req.body as UpdateExpenseRequest;
 
       if (!id) {
         throw createError('Expense ID is required', 400, 'MISSING_ID');
       }
 
       // Convert date string to UTC Date object if provided
-      const updateData: any = { ...updates };
+      const updateData = { ...updates };
       if (updates.date) {
         updateData.date = parseUTCDate(updates.date);
       }
@@ -172,7 +172,7 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -198,7 +198,7 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const startDate = req.query.startDate
         ? new Date(req.query.startDate as string)
@@ -228,7 +228,7 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const startDate = req.query.startDate
         ? new Date(req.query.startDate as string)
@@ -264,7 +264,7 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const year = req.query.year
         ? parseInt(req.query.year as string)
@@ -293,7 +293,7 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const year = req.query.year
         ? parseInt(req.query.year as string)
@@ -317,7 +317,7 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { category } = req.params;
       const petId = req.query.petId as string;
 
@@ -343,7 +343,7 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const startDate = req.query.startDate
         ? new Date(req.query.startDate as string)
@@ -371,11 +371,11 @@ export class ExpenseController {
   };
 
   // GET /api/expenses/export/pdf - Export expenses as PDF
-  exportExpensesPDF = async (
+  exportExpensesPDF = (
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
-  ): Promise<void> => {
+  ): void => {
     try {
       // This will be implemented after pdfkit is installed
       throw createError(

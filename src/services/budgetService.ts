@@ -50,7 +50,7 @@ export class BudgetService {
       .from(budgetLimits)
       .where(whereClause);
 
-    const total = result[0]?.total || 0;
+    const total = result[0]?.total ?? 0;
 
     // Get budget limits with pagination
     const limits = await db
@@ -79,7 +79,7 @@ export class BudgetService {
       .from(budgetLimits)
       .where(and(eq(budgetLimits.id, id), eq(budgetLimits.userId, userId)));
 
-    return budgetLimit || null;
+    return budgetLimit ?? null;
   }
 
   /**
@@ -127,7 +127,8 @@ export class BudgetService {
     updates: Partial<NewBudgetLimit>
   ): Promise<BudgetLimit | null> {
     // Don't allow updating userId
-    const { userId: _, ...safeUpdates } = updates as any;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { userId: _userId, ...safeUpdates } = updates;
 
     const [updatedBudgetLimit] = await db
       .update(budgetLimits)
@@ -135,7 +136,7 @@ export class BudgetService {
       .where(and(eq(budgetLimits.id, id), eq(budgetLimits.userId, userId)))
       .returning();
 
-    return updatedBudgetLimit || null;
+    return updatedBudgetLimit ?? null;
   }
 
   /**
@@ -226,7 +227,7 @@ export class BudgetService {
         .from(expenses)
         .where(and(...expenseConditions));
 
-      const currentSpending = Number(spendingResult[0]?.total || 0);
+      const currentSpending = Number(spendingResult[0]?.total ?? 0);
       const percentage =
         budget.amount > 0 ? (currentSpending / budget.amount) * 100 : 0;
       const isExceeded = percentage >= budget.alertThreshold * 100;
@@ -305,7 +306,7 @@ export class BudgetService {
       .from(expenses)
       .where(and(...expenseConditions));
 
-    const currentSpending = Number(spendingResult[0]?.total || 0);
+    const currentSpending = Number(spendingResult[0]?.total ?? 0);
     const percentage =
       budget.amount > 0 ? (currentSpending / budget.amount) * 100 : 0;
     const remainingAmount = budget.amount - currentSpending;
@@ -378,7 +379,7 @@ export class BudgetService {
         .from(expenses)
         .where(and(...expenseConditions));
 
-      const currentSpending = Number(spendingResult[0]?.total || 0);
+      const currentSpending = Number(spendingResult[0]?.total ?? 0);
       const percentage =
         budget.amount > 0 ? (currentSpending / budget.amount) * 100 : 0;
       const remainingAmount = budget.amount - currentSpending;

@@ -1,5 +1,5 @@
 import { NextFunction, Response } from 'express';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import { EventService } from '../services/eventService';
 import { getPaginationParams, successResponse } from '../utils/response';
 import {
@@ -24,8 +24,8 @@ export class EventController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
-      const petId = req.params.petId || (req.query.petId as string);
+      const userId = requireAuth(req);
+      const petId = req.params.petId ?? (req.query.petId as string);
       const params: EventQueryParams = {
         ...getPaginationParams(req.query),
         type: req.query.type as string,
@@ -38,11 +38,13 @@ export class EventController {
         petId,
         params
       );
+      const page = params.page ?? 1;
+      const limit = params.limit ?? 10;
       const meta = {
         total,
-        page: params.page!,
-        limit: params.limit!,
-        totalPages: Math.ceil(total / params.limit!),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
 
       successResponse(res, events, 200, meta);
@@ -58,7 +60,7 @@ export class EventController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { date } = req.params;
       const params: EventQueryParams = {
         ...getPaginationParams(req.query),
@@ -74,11 +76,13 @@ export class EventController {
         date,
         params
       );
+      const page = params.page ?? 1;
+      const limit = params.limit ?? 10;
       const meta = {
         total,
-        page: params.page!,
-        limit: params.limit!,
-        totalPages: Math.ceil(total / params.limit!),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
 
       successResponse(res, events, 200, meta);
@@ -94,7 +98,7 @@ export class EventController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -120,8 +124,8 @@ export class EventController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
-      const eventData: CreateEventRequest = req.body;
+      const userId = requireAuth(req);
+      const eventData = req.body as CreateEventRequest;
 
       // Validation
       if (
@@ -146,7 +150,7 @@ export class EventController {
 
       const event = await this.eventService.createEvent(
         userId,
-        convertedEventData as any
+        convertedEventData
       );
       successResponse(res, event, 201);
     } catch (error) {
@@ -161,9 +165,9 @@ export class EventController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
-      const updates: UpdateEventRequest = req.body;
+      const updates = req.body as UpdateEventRequest;
 
       if (!id) {
         throw createError('Event ID is required', 400, 'MISSING_ID');
@@ -181,7 +185,7 @@ export class EventController {
       const event = await this.eventService.updateEvent(
         userId,
         id,
-        convertedUpdates as any
+        convertedUpdates
       );
 
       if (!event) {
@@ -201,7 +205,7 @@ export class EventController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -227,9 +231,9 @@ export class EventController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
-      const days = parseInt(req.query.days as string) || 7;
+      const days = parseInt(req.query.days as string) ?? 7;
       const events = await this.eventService.getUpcomingEvents(
         userId,
         petId,
@@ -248,7 +252,7 @@ export class EventController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const events = await this.eventService.getTodayEvents(userId, petId);
       successResponse(res, events);

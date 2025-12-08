@@ -37,7 +37,7 @@ export class PetService {
       .from(pets)
       .where(whereClause);
 
-    const total = result[0]?.total || 0;
+    const total = result[0]?.total ?? 0;
 
     // Get pets with pagination
     const petsList = await db
@@ -62,7 +62,7 @@ export class PetService {
       .select()
       .from(pets)
       .where(and(eq(pets.id, id), eq(pets.userId, userId)));
-    return pet || null;
+    return pet ?? null;
   }
 
   /**
@@ -97,7 +97,8 @@ export class PetService {
     updates: Partial<NewPet>
   ): Promise<Pet | null> {
     // Don't allow updating userId
-    const { userId: _, ...safeUpdates } = updates as any;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { userId: _userId, ...safeUpdates } = updates;
 
     const updateData = {
       ...safeUpdates,
@@ -110,7 +111,7 @@ export class PetService {
       .where(and(eq(pets.id, id), eq(pets.userId, userId)))
       .returning();
 
-    return updatedPet || null;
+    return updatedPet ?? null;
   }
 
   /**
@@ -142,6 +143,6 @@ export class PetService {
       .where(and(eq(pets.id, id), eq(pets.userId, userId)))
       .returning();
 
-    return updatedPet || null;
+    return updatedPet ?? null;
   }
 }

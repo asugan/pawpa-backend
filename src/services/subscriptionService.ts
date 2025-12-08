@@ -224,7 +224,7 @@ export class SubscriptionService {
         .where(eq(subscriptions.id, existingSubscription.id))
         .returning();
 
-      return updatedSubscription!;
+      return updatedSubscription ?? null;
     }
 
     // Create new RevenueCat subscription
@@ -243,7 +243,7 @@ export class SubscriptionService {
       })
       .returning();
 
-    return newSubscription!;
+    return newSubscription ?? null;
   }
 
   /**
@@ -271,7 +271,7 @@ export class SubscriptionService {
       .where(eq(subscriptions.revenueCatId, revenueCatId))
       .returning();
 
-    return updatedSubscription || null;
+    return updatedSubscription ?? null;
   }
 
   /**
@@ -313,16 +313,16 @@ export class SubscriptionService {
       .from(subscriptions)
       .where(eq(subscriptions.userId, userId));
 
-    return subscription || null;
+    return subscription ?? null;
   }
 
   /**
    * Find user ID by RevenueCat app user ID
    * RevenueCat sends app_user_id in webhooks which should match our userId
    */
-  async findUserByRevenueCatAppUserId(
+  findUserByRevenueCatAppUserId(
     appUserId: string
-  ): Promise<string | null> {
+  ): string | null {
     // In our case, app_user_id is the same as userId
     return appUserId;
   }

@@ -1,5 +1,5 @@
 import { NextFunction, Response } from 'express';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import { PetService } from '../services/petService';
 import { HealthRecordService } from '../services/healthRecordService';
 import { successResponse } from '../utils/response';
@@ -27,18 +27,18 @@ export class PetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const params: PetQueryParams = {
-        page: parseInt(req.query.page as string) || 1,
-        limit: Math.min(parseInt(req.query.limit as string) || 10, 100),
+        page: parseInt(req.query.page as string) ?? 1,
+        limit: Math.min(parseInt(req.query.limit as string) ?? 10, 100),
         type: req.query.type as string,
         breed: req.query.breed as string,
         gender: req.query.gender as string,
       };
 
       const { pets, total } = await this.petService.getAllPets(userId, params);
-      const page = params.page || 1;
-      const limit = params.limit || 10;
+      const page = params.page ?? 1;
+      const limit = params.limit ?? 10;
       const meta = { total, page, limit, totalPages: Math.ceil(total / limit) };
 
       successResponse(res, pets, 200, meta);
@@ -54,7 +54,7 @@ export class PetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -80,8 +80,8 @@ export class PetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
-      const petData: CreatePetRequest = req.body;
+      const userId = requireAuth(req);
+      const petData = req.body as CreatePetRequest;
 
       // Validation
       if (!petData.name || !petData.type) {
@@ -102,7 +102,7 @@ export class PetController {
 
       const pet = await this.petService.createPet(
         userId,
-        convertedPetData as any
+        convertedPetData
       );
       successResponse(res, pet, 201);
     } catch (error) {
@@ -117,9 +117,9 @@ export class PetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
-      const updates: UpdatePetRequest = req.body;
+      const updates = req.body as UpdatePetRequest;
 
       if (!id) {
         throw createError('Pet ID is required', 400, 'MISSING_ID');
@@ -136,7 +136,7 @@ export class PetController {
       const pet = await this.petService.updatePet(
         userId,
         id,
-        convertedUpdates as any
+        convertedUpdates
       );
 
       if (!pet) {
@@ -156,7 +156,7 @@ export class PetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -182,9 +182,9 @@ export class PetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
-      const { photoUrl } = req.body;
+      const { photoUrl } = req.body as { photoUrl: string };
 
       if (!id) {
         throw createError('Pet ID is required', 400, 'MISSING_ID');
@@ -213,7 +213,7 @@ export class PetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -228,8 +228,8 @@ export class PetController {
 
       // Optional query parameters for filtering
       const params = {
-        page: parseInt(req.query.page as string) || 1,
-        limit: parseInt(req.query.limit as string) || 50,
+        page: parseInt(req.query.page as string) ?? 1,
+        limit: parseInt(req.query.limit as string) ?? 50,
         type: req.query.type as string,
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,

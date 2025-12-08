@@ -1,8 +1,7 @@
 import { NextFunction, Response } from 'express';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthenticatedRequest, requireAuth, requireParam } from '../middleware/auth';
 import { BudgetService } from '../services/budgetService';
 import {
-  errorResponse,
   getPaginationParams,
   successResponse,
 } from '../utils/response';
@@ -11,7 +10,6 @@ import {
   CreateBudgetLimitRequest,
   UpdateBudgetLimitRequest,
 } from '../types/api';
-import { BudgetLimit } from '../models/schema';
 import { createError } from '../middleware/errorHandler';
 
 export class BudgetController {
@@ -28,8 +26,8 @@ export class BudgetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
-      const { petId } = req.params;
+      const userId = requireAuth(req);
+      const petId = requireParam(req.params.petId, 'petId');
       const params: BudgetQueryParams = {
         ...getPaginationParams(req.query),
         period: req.query.period as string,
@@ -50,9 +48,9 @@ export class BudgetController {
         await this.budgetService.getBudgetLimitsByPetId(userId, petId, params);
       const meta = {
         total,
-        page: params.page!,
-        limit: params.limit!,
-        totalPages: Math.ceil(total / params.limit!),
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        totalPages: Math.ceil(total / (params.limit ?? 10)),
       };
 
       successResponse(res, budgetLimits, 200, meta);
@@ -68,7 +66,7 @@ export class BudgetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -101,8 +99,8 @@ export class BudgetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
-      const budgetData: CreateBudgetLimitRequest = req.body;
+      const userId = requireAuth(req);
+      const budgetData = req.body as CreateBudgetLimitRequest;
 
       // Validation
       if (
@@ -143,9 +141,9 @@ export class BudgetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
-      const updates: UpdateBudgetLimitRequest = req.body;
+      const updates = req.body as UpdateBudgetLimitRequest;
 
       if (!id) {
         throw createError('Budget limit ID is required', 400, 'MISSING_ID');
@@ -190,7 +188,7 @@ export class BudgetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -220,7 +218,7 @@ export class BudgetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const budgetLimits = await this.budgetService.getActiveBudgetLimits(
         userId,
@@ -239,7 +237,7 @@ export class BudgetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const alerts = await this.budgetService.checkBudgetAlerts(userId, petId);
       successResponse(res, alerts);
@@ -255,7 +253,7 @@ export class BudgetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -285,7 +283,7 @@ export class BudgetController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const statuses = await this.budgetService.getAllBudgetStatuses(
         userId,

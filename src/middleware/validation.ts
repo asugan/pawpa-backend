@@ -8,16 +8,16 @@ export const validate = (
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = req[source];
+      const data = req[source] as unknown;
       const validatedData = schema.parse(data);
 
       // Replace the request data with validated data
-      req[source] = validatedData;
+      (req as unknown as Record<string, unknown>)[source] = validatedData;
 
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const details = error.issues.map((err: any) => ({
+        const details = error.issues.map((err) => ({
           field: err.path.join('.'),
           message: err.message,
           code: err.code,

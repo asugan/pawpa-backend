@@ -1,8 +1,7 @@
 import { NextFunction, Response } from 'express';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import { FeedingScheduleService } from '../services/feedingScheduleService';
 import {
-  errorResponse,
   getPaginationParams,
   successResponse,
 } from '../utils/response';
@@ -11,7 +10,6 @@ import {
   FeedingScheduleQueryParams,
   UpdateFeedingScheduleRequest,
 } from '../types/api';
-import { FeedingSchedule } from '../models/schema';
 import { createError } from '../middleware/errorHandler';
 
 export class FeedingScheduleController {
@@ -28,9 +26,9 @@ export class FeedingScheduleController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       // Support both URL params (/pets/:petId/feeding-schedules) and query string (/feeding-schedules?petId=...)
-      const petId = req.params.petId || (req.query.petId as string);
+      const petId = req.params.petId ?? (req.query.petId as string);
       const params: FeedingScheduleQueryParams = {
         ...getPaginationParams(req.query),
         isActive:
@@ -48,11 +46,13 @@ export class FeedingScheduleController {
           petId,
           params
         );
+      const page = params.page ?? 1;
+      const limit = params.limit ?? 10;
       const meta = {
         total,
-        page: params.page!,
-        limit: params.limit!,
-        totalPages: Math.ceil(total / params.limit!),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
 
       successResponse(res, schedules, 200, meta);
@@ -68,7 +68,7 @@ export class FeedingScheduleController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -101,8 +101,8 @@ export class FeedingScheduleController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
-      const scheduleData: CreateFeedingScheduleRequest = req.body;
+      const userId = requireAuth(req);
+      const scheduleData = req.body as CreateFeedingScheduleRequest;
 
       // Validation
       if (
@@ -136,9 +136,9 @@ export class FeedingScheduleController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
-      const updates: UpdateFeedingScheduleRequest = req.body;
+      const updates = req.body as UpdateFeedingScheduleRequest;
 
       if (!id) {
         throw createError('Feeding schedule ID is required', 400, 'MISSING_ID');
@@ -171,7 +171,7 @@ export class FeedingScheduleController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const { id } = req.params;
 
       if (!id) {
@@ -206,7 +206,7 @@ export class FeedingScheduleController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const schedules = await this.feedingScheduleService.getActiveSchedules(
         userId,
@@ -225,7 +225,7 @@ export class FeedingScheduleController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const schedules = await this.feedingScheduleService.getTodaySchedules(
         userId,
@@ -244,7 +244,7 @@ export class FeedingScheduleController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = req.user!.id;
+      const userId = requireAuth(req);
       const petId = req.query.petId as string;
       const schedule = await this.feedingScheduleService.getNextFeedingTime(
         userId,
