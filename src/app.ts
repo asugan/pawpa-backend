@@ -6,6 +6,7 @@ import { corsMiddleware } from './middleware/cors';
 import { requestLogger } from './middleware/requestLogger';
 import { rateLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
+import { utcDateSerializer } from './middleware/utcDateSerializer';
 import apiRoutes from './routes';
 
 const app = express();
@@ -29,6 +30,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging
 app.use(requestLogger);
+
+// UTC date serialization middleware
+app.use(utcDateSerializer);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

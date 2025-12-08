@@ -5,6 +5,7 @@ import { successResponse, errorResponse, getPaginationParams } from '../utils/re
 import { CreateExpenseRequest, UpdateExpenseRequest, ExpenseQueryParams } from '../types/api';
 import { Expense } from '../models/schema';
 import { createError } from '../middleware/errorHandler';
+import { parseUTCDate } from '../lib/dateUtils';
 
 export class ExpenseController {
   private expenseService: ExpenseService;
@@ -72,10 +73,10 @@ export class ExpenseController {
         throw createError('Pet ID, category, amount, currency, and date are required', 400, 'MISSING_REQUIRED_FIELDS');
       }
 
-      // Convert date string to Date object
+      // Convert date string to UTC Date object
       const expense = await this.expenseService.createExpense(userId, {
         ...expenseData,
-        date: new Date(expenseData.date),
+        date: parseUTCDate(expenseData.date),
       } as any);
 
       successResponse(res, expense, 201);
@@ -95,10 +96,10 @@ export class ExpenseController {
         throw createError('Expense ID is required', 400, 'MISSING_ID');
       }
 
-      // Convert date string to Date object if provided
+      // Convert date string to UTC Date object if provided
       const updateData: any = { ...updates };
       if (updates.date) {
-        updateData.date = new Date(updates.date);
+        updateData.date = parseUTCDate(updates.date);
       }
 
       const expense = await this.expenseService.updateExpense(userId, id, updateData);

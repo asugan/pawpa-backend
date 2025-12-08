@@ -4,6 +4,7 @@ import { EventService } from '../services/eventService';
 import { successResponse, getPaginationParams } from '../utils/response';
 import { CreateEventRequest, UpdateEventRequest, EventQueryParams } from '../types/api';
 import { createError } from '../middleware/errorHandler';
+import { parseUTCDate } from '../lib/dateUtils';
 
 export class EventController {
   private eventService: EventService;
@@ -89,11 +90,11 @@ export class EventController {
         throw createError('Pet ID, title, type, and start time are required', 400, 'MISSING_REQUIRED_FIELDS');
       }
 
-      // Convert string dates to Date objects
+      // Convert string dates to UTC Date objects
       const convertedEventData = {
         ...eventData,
-        startTime: new Date(eventData.startTime),
-        ...(eventData.endTime && { endTime: new Date(eventData.endTime) })
+        startTime: parseUTCDate(eventData.startTime),
+        ...(eventData.endTime && { endTime: parseUTCDate(eventData.endTime) })
       };
 
       const event = await this.eventService.createEvent(userId, convertedEventData as any);
@@ -114,11 +115,11 @@ export class EventController {
         throw createError('Event ID is required', 400, 'MISSING_ID');
       }
 
-      // Convert string dates to Date objects
+      // Convert string dates to UTC Date objects
       const convertedUpdates = {
         ...updates,
-        ...(updates.startTime && { startTime: new Date(updates.startTime) }),
-        ...(updates.endTime && { endTime: new Date(updates.endTime) })
+        ...(updates.startTime && { startTime: parseUTCDate(updates.startTime) }),
+        ...(updates.endTime && { endTime: parseUTCDate(updates.endTime) })
       };
 
       const event = await this.eventService.updateEvent(userId, id, convertedUpdates as any);

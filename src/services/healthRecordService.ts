@@ -3,6 +3,7 @@ import { db, healthRecords, pets } from '../config/database';
 import { HealthRecordQueryParams } from '../types/api';
 import { HealthRecord, NewHealthRecord } from '../models/schema';
 import { generateId } from '../utils/id';
+import { parseUTCDate, toUTCISOString } from '../lib/dateUtils';
 
 export class HealthRecordService {
   /**
@@ -24,11 +25,11 @@ export class HealthRecordService {
     }
 
     if (startDate) {
-      conditions.push(gte(healthRecords.date, new Date(startDate)));
+      conditions.push(gte(healthRecords.date, parseUTCDate(startDate)));
     }
 
     if (endDate) {
-      conditions.push(lte(healthRecords.date, new Date(endDate)));
+      conditions.push(lte(healthRecords.date, parseUTCDate(endDate)));
     }
 
     const whereClause = and(...conditions);

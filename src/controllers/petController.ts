@@ -5,6 +5,7 @@ import { HealthRecordService } from '../services/healthRecordService';
 import { successResponse } from '../utils/response';
 import { CreatePetRequest, UpdatePetRequest, PetQueryParams } from '../types/api';
 import { createError } from '../middleware/errorHandler';
+import { parseUTCDate } from '../lib/dateUtils';
 
 export class PetController {
   private petService: PetService;
@@ -71,10 +72,10 @@ export class PetController {
         throw createError('Name and type are required', 400, 'MISSING_REQUIRED_FIELDS');
       }
 
-      // Convert string dates to Date objects
+      // Convert string dates to UTC Date objects
       const convertedPetData = {
         ...petData,
-        ...(petData.birthDate && { birthDate: new Date(petData.birthDate) })
+        ...(petData.birthDate && { birthDate: parseUTCDate(petData.birthDate) })
       };
 
       const pet = await this.petService.createPet(userId, convertedPetData as any);
@@ -95,10 +96,10 @@ export class PetController {
         throw createError('Pet ID is required', 400, 'MISSING_ID');
       }
 
-      // Convert string dates to Date objects
+      // Convert string dates to UTC Date objects
       const convertedUpdates = {
         ...updates,
-        ...(updates.birthDate && { birthDate: new Date(updates.birthDate) })
+        ...(updates.birthDate && { birthDate: parseUTCDate(updates.birthDate) })
       };
 
       const pet = await this.petService.updatePet(userId, id, convertedUpdates as any);

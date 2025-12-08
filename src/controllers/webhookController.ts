@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { SubscriptionService } from '../services/subscriptionService';
 import { SUBSCRIPTION_STATUSES } from '../config/subscriptionConfig';
+import { parseUTCDate } from '../lib/dateUtils';
 
 /**
  * RevenueCat Webhook Event Types
@@ -100,8 +101,8 @@ export class WebhookController {
         return;
       }
 
-      // Calculate expiration date
-      const expiresAt = new Date(event.expiration_at_ms);
+      // Calculate expiration date (RevenueCat provides milliseconds since epoch)
+      const expiresAt = parseUTCDate(new Date(event.expiration_at_ms).toISOString());
 
       // Create a unique RevenueCat ID from transaction
       const revenueCatId = event.original_transaction_id || event.transaction_id || event.id;

@@ -4,6 +4,7 @@ import { HealthRecordService } from '../services/healthRecordService';
 import { successResponse, getPaginationParams } from '../utils/response';
 import { CreateHealthRecordRequest, UpdateHealthRecordRequest, HealthRecordQueryParams } from '../types/api';
 import { createError } from '../middleware/errorHandler';
+import { parseUTCDate } from '../lib/dateUtils';
 
 export class HealthRecordController {
   private healthRecordService: HealthRecordService;
@@ -86,11 +87,11 @@ export class HealthRecordController {
         throw createError('Pet ID, type, title, and date are required', 400, 'MISSING_REQUIRED_FIELDS');
       }
 
-      // Convert string dates to Date objects
+      // Convert string dates to UTC Date objects
       const convertedRecordData = {
         ...recordData,
-        date: new Date(recordData.date),
-        ...(recordData.nextDueDate && { nextDueDate: new Date(recordData.nextDueDate) })
+        date: parseUTCDate(recordData.date),
+        ...(recordData.nextDueDate && { nextDueDate: parseUTCDate(recordData.nextDueDate) })
       };
 
       const record = await this.healthRecordService.createHealthRecord(userId, convertedRecordData as any);
@@ -111,11 +112,11 @@ export class HealthRecordController {
         throw createError('Health record ID is required', 400, 'MISSING_ID');
       }
 
-      // Convert string dates to Date objects
+      // Convert string dates to UTC Date objects
       const convertedUpdates = {
         ...updates,
-        ...(updates.date && { date: new Date(updates.date) }),
-        ...(updates.nextDueDate && { nextDueDate: new Date(updates.nextDueDate) })
+        ...(updates.date && { date: parseUTCDate(updates.date) }),
+        ...(updates.nextDueDate && { nextDueDate: parseUTCDate(updates.nextDueDate) })
       };
 
       const record = await this.healthRecordService.updateHealthRecord(userId, id, convertedUpdates as any);

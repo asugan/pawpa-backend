@@ -3,6 +3,7 @@ import { db, events, pets } from '../config/database';
 import { EventQueryParams } from '../types/api';
 import { Event, NewEvent } from '../models/schema';
 import { generateId } from '../utils/id';
+import { getUTCTodayBoundaries, createUTCDateFilter, parseUTCDate } from '../lib/dateUtils';
 
 export class EventService {
   /**
@@ -24,11 +25,11 @@ export class EventService {
     }
 
     if (startDate) {
-      conditions.push(gte(events.startTime, new Date(startDate)));
+      conditions.push(gte(events.startTime, parseUTCDate(startDate)));
     }
 
     if (endDate) {
-      conditions.push(lte(events.startTime, new Date(endDate)));
+      conditions.push(lte(events.startTime, parseUTCDate(endDate)));
     }
 
     const whereClause = and(...conditions);
@@ -62,15 +63,17 @@ export class EventService {
   async getEventsByDate(userId: string, date: string, params: EventQueryParams): Promise<{ events: Event[]; total: number }> {
     const { page = 1, limit = 10, type } = params;
     const offset = (page - 1) * limit;
-    const targetDate = new Date(date);
-    const nextDay = new Date(targetDate);
-    nextDay.setDate(nextDay.getDate() + 1);
 
-    // Build where conditions
+    // Parse the date and get next day in UTC
+    const startDate = parseUTCDate(date);
+    const endDate = new Date(startDate);
+    endDate.setUTCDate(endDate.getUTCDate() + 1);
+
+    // Build where conditions using UTC boundaries
     const conditions = [
       eq(events.userId, userId),
-      gte(events.startTime, targetDate),
-      lte(events.startTime, nextDay),
+      gte(events.startTime, startDate),
+      lte(events.startTime, endDate),
     ];
 
     if (type) {
@@ -201,18 +204,15 @@ export class EventService {
   }
 
   /**
-   * Get today's events for a user
+   * Get today's events for a user (UTC-based)
    */
   async getTodayEvents(userId: string, petId?: string): Promise<Event[]> {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const todayBoundary = getUTCTodayBoundaries();
 
     const conditions = [
       eq(events.userId, userId),
-      gte(events.startTime, today),
-      lte(events.startTime, tomorrow),
+      gte(events.startTime, new Date(todayBoundary.gte)),
+      lte(events.startTime, new Date(todayBoundary.lte)),
     ];
 
     if (petId) {

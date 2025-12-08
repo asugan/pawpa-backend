@@ -3,6 +3,7 @@ import { db, feedingSchedules, pets } from '../config/database';
 import { FeedingScheduleQueryParams } from '../types/api';
 import { FeedingSchedule, NewFeedingSchedule } from '../models/schema';
 import { generateId } from '../utils/id';
+import { toUTCISOString } from '../lib/dateUtils';
 
 export class FeedingScheduleService {
   /**
@@ -150,7 +151,8 @@ export class FeedingScheduleService {
    * Get today's schedules for a user
    */
   async getTodaySchedules(userId: string, petId?: string): Promise<FeedingSchedule[]> {
-    const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
+    // Use UTC date to get consistent day regardless of server timezone
+    const today = new Date(toUTCISOString(new Date())).getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const todayName = dayNames[today];
 
@@ -175,7 +177,8 @@ export class FeedingScheduleService {
    * Get next feeding time for a user
    */
   async getNextFeedingTime(userId: string, petId?: string): Promise<FeedingSchedule | null> {
-    const today = new Date().getDay();
+    // Use UTC date to get consistent day regardless of server timezone
+    const today = new Date(toUTCISOString(new Date())).getUTCDay();
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const todayName = dayNames[today];
 
@@ -189,7 +192,8 @@ export class FeedingScheduleService {
       conditions.push(eq(feedingSchedules.petId, petId));
     }
 
-    const currentTime = new Date().toTimeString().slice(0, 5); // HH:MM format
+    // Using UTC time for consistency. TODO: Consider user's local timezone in future
+    const currentTime = new Date(toUTCISOString(new Date())).toTimeString().slice(0, 5); // HH:MM format
 
     const [schedule] = await db
       .select()
