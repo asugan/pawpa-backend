@@ -145,3 +145,24 @@ export function isUTCToday(date: Date | number): boolean {
 
   return timestamp >= today.gte && timestamp <= today.lte;
 }
+
+/**
+ * Get UTC date boundaries for a range of days from now
+ * @param days - Number of days to look ahead (default: 7)
+ * @returns Object with UTC start (now) and end timestamps
+ */
+export function getUTCUpcomingBoundaries(days: number = 7) {
+  const now = new Date();
+  const endDate = new Date(now);
+
+  // Add days in UTC to avoid timezone issues
+  endDate.setUTCDate(endDate.getUTCDate() + days);
+
+  // Set end of day for the final day
+  endDate.setUTCHours(23, 59, 59, 999);
+
+  return {
+    gte: now.getTime(),
+    lte: endDate.getTime(),
+  };
+}

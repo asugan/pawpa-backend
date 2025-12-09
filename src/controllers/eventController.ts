@@ -234,7 +234,35 @@ export class EventController {
     try {
       const userId = requireAuth(req);
       const petId = req.query.petId as string;
-      const days = parseInt(req.query.days as string) ?? 7;
+
+      // Parse and validate days parameter
+      const daysParam = req.query.days;
+      let days = 7; // default
+
+      if (daysParam !== undefined) {
+        const parsedDays = parseInt(daysParam as string);
+
+        // Validate it's a number
+        if (isNaN(parsedDays)) {
+          throw createError(
+            'Days parameter must be a valid number',
+            400,
+            'INVALID_DAYS_PARAM'
+          );
+        }
+
+        // Validate range
+        if (parsedDays < 1 || parsedDays > 365) {
+          throw createError(
+            'Days parameter must be between 1 and 365',
+            400,
+            'INVALID_DAYS_RANGE'
+          );
+        }
+
+        days = parsedDays;
+      }
+
       const events = await this.eventService.getUpcomingEvents(
         userId,
         petId,

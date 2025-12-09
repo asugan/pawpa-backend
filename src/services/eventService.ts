@@ -5,6 +5,7 @@ import { Event, NewEvent } from '../models/schema';
 import { generateId } from '../utils/id';
 import {
   getUTCTodayBoundaries,
+  getUTCUpcomingBoundaries,
   parseUTCDate,
 } from '../lib/dateUtils';
 
@@ -195,21 +196,32 @@ export class EventService {
   }
 
   /**
-   * Get upcoming events for a user
+   * Get upcoming events for a user (UTC-based)
+   * @param userId - User ID
+   * @param petId - Optional pet ID to filter by
+   * @param days - Number of days to look ahead (1-365, default: 7)
+   * @returns Array of upcoming events
    */
   async getUpcomingEvents(
     userId: string,
     petId?: string,
-    days = 7
+    days: number = 7
   ): Promise<Event[]> {
-    const now = new Date();
-    const futureDate = new Date(now);
-    futureDate.setDate(futureDate.getDate() + days);
+    // Parameter validation
+    if (days < 1) {
+      throw new Error('Days parameter must be at least 1');
+    }
+    if (days > 365) {
+      throw new Error('Days parameter cannot exceed 365');
+    }
+
+    // Get UTC boundaries for the date range
+    const boundaries = getUTCUpcomingBoundaries(days);
 
     const conditions = [
       eq(events.userId, userId),
-      gte(events.startTime, now),
-      lte(events.startTime, futureDate),
+      gte(events.startTime, new Date(boundaries.gte)),
+      lte(events.startTime, new Date(boundaries.lte)),
     ];
 
     if (petId) {
