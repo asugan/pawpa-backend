@@ -9,6 +9,7 @@ import {
 } from '../types/api';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
+import { NewHealthRecord } from '../models/schema';
 
 export class HealthRecordController {
   private healthRecordService: HealthRecordService;
@@ -151,9 +152,7 @@ export class HealthRecordController {
       const convertedRecordData = {
         ...recordData,
         date: parseUTCDate(recordData.date),
-        ...(recordData.nextDueDate && {
-          nextDueDate: parseUTCDate(recordData.nextDueDate),
-        }),
+        nextDueDate: recordData.nextDueDate ? parseUTCDate(recordData.nextDueDate) : null,
       };
 
       const record = await this.healthRecordService.createHealthRecord(
@@ -182,12 +181,12 @@ export class HealthRecordController {
       }
 
       // Convert string dates to UTC Date objects
-      const convertedUpdates = {
+      const convertedUpdates: Partial<NewHealthRecord> = {
         ...updates,
-        ...(updates.date && { date: parseUTCDate(updates.date) }),
-        ...(updates.nextDueDate && {
-          nextDueDate: parseUTCDate(updates.nextDueDate),
-        }),
+        date: updates.date ? parseUTCDate(updates.date) : undefined,
+        nextDueDate: updates.nextDueDate !== undefined
+          ? (updates.nextDueDate ? parseUTCDate(updates.nextDueDate) : null)
+          : undefined,
       };
 
       const record = await this.healthRecordService.updateHealthRecord(

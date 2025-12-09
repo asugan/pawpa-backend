@@ -23,14 +23,18 @@ export const errorResponse = (
   statusCode = 400,
   details?: unknown
 ): Response => {
+  const error: { code: string; message: string; details?: unknown } = {
+    code,
+    message,
+  };
+
+  if (details !== undefined && details !== null) {
+    error.details = details;
+  }
+
   const response: ApiResponse<unknown> = {
     success: false,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    error: {
-      code,
-      message,
-      ...(details && { details }),
-    },
+    error,
   };
   return res.status(statusCode).json(response);
 };

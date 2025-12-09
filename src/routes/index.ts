@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 import petRoutes from './petRoutes';
 import healthRecordRoutes from './healthRecordRoutes';
 import eventRoutes from './eventRoutes';
@@ -16,7 +16,7 @@ const webhookController = new WebhookController();
 router.post('/subscription/webhook', webhookController.handleWebhook);
 
 // All other API routes require authentication
-router.use(requireAuth);
+router.use(authMiddleware);
 
 // Mount routes
 router.use('/pets', petRoutes);

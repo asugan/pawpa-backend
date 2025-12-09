@@ -201,7 +201,7 @@ export class SubscriptionService {
     revenueCatId: string,
     expiresAt: Date,
     status: string
-  ): Promise<Subscription> {
+  ): Promise<Subscription | null> {
     const now = new Date();
 
     // Check if user already has a subscription

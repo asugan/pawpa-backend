@@ -10,6 +10,7 @@ import {
 } from '../types/api';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
+import { NewPet } from '../models/schema';
 
 export class PetController {
   private petService: PetService;
@@ -95,9 +96,7 @@ export class PetController {
       // Convert string dates to UTC Date objects
       const convertedPetData = {
         ...petData,
-        ...(petData.birthDate && {
-          birthDate: parseUTCDate(petData.birthDate),
-        }),
+        birthDate: petData.birthDate ? parseUTCDate(petData.birthDate) : null,
       };
 
       const pet = await this.petService.createPet(
@@ -126,11 +125,11 @@ export class PetController {
       }
 
       // Convert string dates to UTC Date objects
-      const convertedUpdates = {
+      const convertedUpdates: Partial<NewPet> = {
         ...updates,
-        ...(updates.birthDate && {
-          birthDate: parseUTCDate(updates.birthDate),
-        }),
+        birthDate: updates.birthDate !== undefined
+          ? (updates.birthDate ? parseUTCDate(updates.birthDate) : null)
+          : undefined,
       };
 
       const pet = await this.petService.updatePet(

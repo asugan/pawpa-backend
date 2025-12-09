@@ -9,6 +9,7 @@ import {
 } from '../types/api';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
+import { NewEvent } from '../models/schema';
 
 export class EventController {
   private eventService: EventService;
@@ -145,7 +146,7 @@ export class EventController {
       const convertedEventData = {
         ...eventData,
         startTime: parseUTCDate(eventData.startTime),
-        ...(eventData.endTime && { endTime: parseUTCDate(eventData.endTime) }),
+        endTime: eventData.endTime ? parseUTCDate(eventData.endTime) : null,
       };
 
       const event = await this.eventService.createEvent(
@@ -174,12 +175,12 @@ export class EventController {
       }
 
       // Convert string dates to UTC Date objects
-      const convertedUpdates = {
+      const convertedUpdates: Partial<NewEvent> = {
         ...updates,
-        ...(updates.startTime && {
-          startTime: parseUTCDate(updates.startTime),
-        }),
-        ...(updates.endTime && { endTime: parseUTCDate(updates.endTime) }),
+        startTime: updates.startTime ? parseUTCDate(updates.startTime) : undefined,
+        endTime: updates.endTime !== undefined
+          ? (updates.endTime ? parseUTCDate(updates.endTime) : null)
+          : undefined,
       };
 
       const event = await this.eventService.updateEvent(

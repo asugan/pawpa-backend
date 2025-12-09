@@ -70,7 +70,7 @@ export function normalizeDatesToUTC<T extends Record<string, unknown>>(
         typeof normalized[field] === 'object' &&
         'toISOString' in normalized[field]
       ) {
-        normalized[field] = toUTCISOString(normalized[field]) as T[keyof T];
+        normalized[field] = toUTCISOString(normalized[field] as unknown as Date) as T[keyof T];
       }
     }
   }

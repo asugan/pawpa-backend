@@ -12,6 +12,7 @@ import {
 } from '../types/api';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
+import { NewExpense } from '../models/schema';
 
 export class ExpenseController {
   private expenseService: ExpenseService;
@@ -144,10 +145,10 @@ export class ExpenseController {
       }
 
       // Convert date string to UTC Date object if provided
-      const updateData = { ...updates };
-      if (updates.date) {
-        updateData.date = parseUTCDate(updates.date);
-      }
+      const updateData: Partial<NewExpense> = {
+        ...updates,
+        date: updates.date ? parseUTCDate(updates.date) : undefined,
+      };
 
       const expense = await this.expenseService.updateExpense(
         userId,

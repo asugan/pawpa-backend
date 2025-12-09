@@ -32,7 +32,7 @@ export interface AuthenticatedRequest extends Request {
  * Middleware that requires authentication.
  * Returns 401 if no valid session is found.
  */
-export async function requireAuth(
+export async function authMiddleware(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
