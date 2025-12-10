@@ -221,3 +221,48 @@ export interface BudgetQueryParams extends PaginationParams {
   isActive?: boolean;
   category?: string;
 }
+
+// Simplified User Budget System Types
+export interface SetUserBudgetInput {
+  amount: number;
+  currency: string;
+  alertThreshold?: number; // optional, default 0.8
+  isActive?: boolean; // optional, default true
+}
+
+export interface UserBudget {
+  id: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  alertThreshold: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BudgetStatus {
+  budget: UserBudget;
+  currentSpending: number;
+  percentage: number;
+  remainingAmount: number;
+  isAlert: boolean;
+  petBreakdown?: {
+    petId: string;
+    petName: string;
+    spending: number;
+  }[];
+}
+
+export interface BudgetAlert {
+  budget: UserBudget;
+  currentSpending: number;
+  percentage: number;
+  alertThreshold: number;
+  isOverBudget: boolean;
+  petBreakdown?: {
+    petId: string;
+    petName: string;
+    spending: number;
+  }[];
+}

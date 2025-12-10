@@ -8,6 +8,13 @@
       "when": 1764366232854,
       "tag": "0000_clear_warpath",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1733847265000,
+      "tag": "0001_create_user_budgets",
+      "breakpoints": true
     }
   ]
 }

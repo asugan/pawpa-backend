@@ -151,7 +151,7 @@ export function isUTCToday(date: Date | number): boolean {
  * @param days - Number of days to look ahead (default: 7)
  * @returns Object with UTC start (now) and end timestamps
  */
-export function getUTCUpcomingBoundaries(days: number = 7) {
+export function getUTCUpcomingBoundaries(days = 7) {
   const now = new Date();
   const endDate = new Date(now);
 

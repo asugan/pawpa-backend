@@ -5,7 +5,7 @@ import healthRecordRoutes from './healthRecordRoutes';
 import eventRoutes from './eventRoutes';
 import feedingScheduleRoutes from './feedingScheduleRoutes';
 import expenseRoutes from './expenseRoutes';
-import budgetRoutes from './budgetRoutes';
+import userBudgetRoutes from './userBudgetRoutes';
 import subscriptionRoutes from './subscriptionRoutes';
 import { WebhookController } from '../controllers/webhookController';
 
@@ -24,7 +24,7 @@ router.use('/health-records', healthRecordRoutes);
 router.use('/events', eventRoutes);
 router.use('/feeding-schedules', feedingScheduleRoutes);
 router.use('/expenses', expenseRoutes);
-router.use('/budget-limits', budgetRoutes);
+router.use('/budget', userBudgetRoutes);
 router.use('/subscription', subscriptionRoutes);
 
 // Pet-specific nested routes
@@ -32,6 +32,5 @@ router.use('/pets/:petId/health-records', healthRecordRoutes);
 router.use('/pets/:petId/events', eventRoutes);
 router.use('/pets/:petId/feeding-schedules', feedingScheduleRoutes);
 router.use('/pets/:petId/expenses', expenseRoutes);
-router.use('/pets/:petId/budget-limits', budgetRoutes);
 
 export default router;

@@ -205,7 +205,7 @@ export class EventService {
   async getUpcomingEvents(
     userId: string,
     petId?: string,
-    days: number = 7
+    days = 7
   ): Promise<Event[]> {
     // Parameter validation
     if (days < 1) {

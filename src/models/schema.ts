@@ -216,6 +216,25 @@ export const budgetLimits = sqliteTable('budget_limits', {
     .$defaultFn(() => new Date()),
 });
 
+// User budgets table
+export const userBudgets = sqliteTable('user_budgets', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  amount: real('amount').notNull(),
+  currency: text('currency').notNull().default('TRY'),
+  alertThreshold: real('alert_threshold').notNull().default(0.8),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 // Subscriptions table - unified table for internal trials and RevenueCat subscriptions
 export const subscriptions = sqliteTable('subscriptions', {
   id: text('id').primaryKey(),
@@ -264,6 +283,7 @@ export const userRelations = relations(user, ({ many }) => ({
   feedingSchedules: many(feedingSchedules),
   expenses: many(expenses),
   budgetLimits: many(budgetLimits),
+  userBudgets: many(userBudgets),
   subscriptions: many(subscriptions),
 }));
 
@@ -354,6 +374,13 @@ export const budgetLimitsRelations = relations(budgetLimits, ({ one }) => ({
   }),
 }));
 
+export const userBudgetsRelations = relations(userBudgets, ({ one }) => ({
+  user: one(user, {
+    fields: [userBudgets.userId],
+    references: [user.id],
+  }),
+}));
+
 export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   user: one(user, {
     fields: [subscriptions.userId],
@@ -398,6 +425,8 @@ export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
 export type BudgetLimit = typeof budgetLimits.$inferSelect;
 export type NewBudgetLimit = typeof budgetLimits.$inferInsert;
+export type UserBudget = typeof userBudgets.$inferSelect;
+export type NewUserBudget = typeof userBudgets.$inferInsert;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type NewSubscription = typeof subscriptions.$inferInsert;
 export type DeviceTrialRegistry = typeof deviceTrialRegistry.$inferSelect;
