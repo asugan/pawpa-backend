@@ -1,7 +1,5 @@
-import { and, count, desc, eq, like } from 'drizzle-orm';
-import { db, pets } from '../config/database';
+import { PetModel } from '../models/mongoose/pet';
 import { NewPet, Pet, PetQueryParams } from '../types/api';
-import { generateId } from '../utils/id';
 
 export class PetService {
   /**
@@ -15,38 +13,29 @@ export class PetService {
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const conditions = [eq(pets.userId, userId)];
+    const whereClause: any = { userId };
 
     if (type) {
-      conditions.push(eq(pets.type, type));
+      whereClause.type = type;
     }
 
     if (breed) {
-      conditions.push(like(pets.breed, `%${breed}%`));
+      whereClause.breed = { $regex: breed, $options: 'i' };
     }
 
     if (gender) {
-      conditions.push(eq(pets.gender, gender));
+      whereClause.gender = gender;
     }
 
-    const whereClause = and(...conditions);
-
     // Get total count
-    const result = await db
-      .select({ total: count() })
-      .from(pets)
-      .where(whereClause);
-
-    const total = result[0]?.total ?? 0;
+    const total = await PetModel.countDocuments(whereClause);
 
     // Get pets with pagination
-    const petsList = await db
-      .select()
-      .from(pets)
-      .where(whereClause)
-      .orderBy(desc(pets.createdAt))
+    const petsList = await PetModel.find(whereClause)
+      .sort({ createdAt: -1 })
       .limit(limit)
-      .offset(offset);
+      .skip(offset)
+      .exec();
 
     return {
       pets: petsList,
@@ -58,10 +47,7 @@ export class PetService {
    * Get a pet by ID, ensuring it belongs to the user
    */
   async getPetById(userId: string, id: string): Promise<Pet | null> {
-    const [pet] = await db
-      .select()
-      .from(pets)
-      .where(and(eq(pets.id, id), eq(pets.userId, userId)));
+    const pet = await PetModel.findOne({ _id: id, userId }).exec();
     return pet ?? null;
   }
 
@@ -72,16 +58,9 @@ export class PetService {
     userId: string,
     petData: Omit<NewPet, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
   ): Promise<Pet> {
-    const newPet: NewPet = {
-      id: generateId(),
-      userId,
-      ...petData,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const newPet = new PetModel({ ...petData, userId });
+    const createdPet = await newPet.save();
 
-    const result = await db.insert(pets).values(newPet).returning();
-    const createdPet = result[0];
     if (!createdPet) {
       throw new Error('Failed to create pet');
     }
@@ -100,16 +79,11 @@ export class PetService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId: _userId, ...safeUpdates } = updates;
 
-    const updateData = {
-      ...safeUpdates,
-      updatedAt: new Date(),
-    };
-
-    const [updatedPet] = await db
-      .update(pets)
-      .set(updateData)
-      .where(and(eq(pets.id, id), eq(pets.userId, userId)))
-      .returning();
+    const updatedPet = await PetModel.findOneAndUpdate(
+      { _id: id, userId },
+      safeUpdates,
+      { new: true }
+    ).exec();
 
     return updatedPet ?? null;
   }
@@ -118,11 +92,7 @@ export class PetService {
    * Delete a pet, ensuring it belongs to the user
    */
   async deletePet(userId: string, id: string): Promise<boolean> {
-    const [deletedPet] = await db
-      .delete(pets)
-      .where(and(eq(pets.id, id), eq(pets.userId, userId)))
-      .returning();
-
+    const deletedPet = await PetModel.findOneAndDelete({ _id: id, userId }).exec();
     return !!deletedPet;
   }
 
@@ -134,14 +104,11 @@ export class PetService {
     id: string,
     photoUrl: string
   ): Promise<Pet | null> {
-    const [updatedPet] = await db
-      .update(pets)
-      .set({
-        profilePhoto: photoUrl,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(pets.id, id), eq(pets.userId, userId)))
-      .returning();
+    const updatedPet = await PetModel.findOneAndUpdate(
+      { _id: id, userId },
+      { profilePhoto: photoUrl },
+      { new: true }
+    ).exec();
 
     return updatedPet ?? null;
   }

@@ -1,8 +1,6 @@
-import { and, count, eq, like } from 'drizzle-orm';
-import { db, feedingSchedules, pets } from '../config/database';
+import { FeedingScheduleModel } from '../models/mongoose/feedingSchedule';
+import { PetModel } from '../models/mongoose/pet';
 import { FeedingScheduleQueryParams } from '../types/api';
-import { FeedingSchedule, NewFeedingSchedule } from '../models/schema';
-import { generateId } from '../utils/id';
 import { toUTCISOString } from '../lib/dateUtils';
 
 export class FeedingScheduleService {
@@ -13,44 +11,35 @@ export class FeedingScheduleService {
     userId: string,
     petId?: string,
     params?: FeedingScheduleQueryParams
-  ): Promise<{ schedules: FeedingSchedule[]; total: number }> {
+  ): Promise<{ schedules: any[]; total: number }> {
     const { page = 1, limit = 10, isActive, foodType } = params ?? {};
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const conditions = [eq(feedingSchedules.userId, userId)];
+    const whereClause: any = { userId };
 
     // Only filter by petId if provided
     if (petId) {
-      conditions.push(eq(feedingSchedules.petId, petId));
+      whereClause.petId = petId;
     }
 
     if (isActive !== undefined) {
-      conditions.push(eq(feedingSchedules.isActive, isActive));
+      whereClause.isActive = isActive;
     }
 
     if (foodType) {
-      conditions.push(eq(feedingSchedules.foodType, foodType));
+      whereClause.foodType = foodType;
     }
 
-    const whereClause = and(...conditions);
-
     // Get total count
-    const result = await db
-      .select({ total: count() })
-      .from(feedingSchedules)
-      .where(whereClause);
-
-    const total = result[0]?.total ?? 0;
+    const total = await FeedingScheduleModel.countDocuments(whereClause);
 
     // Get schedules with pagination
-    const schedules = await db
-      .select()
-      .from(feedingSchedules)
-      .where(whereClause)
-      .orderBy(feedingSchedules.time)
+    const schedules = await FeedingScheduleModel.find(whereClause)
+      .sort({ time: 1 })
       .limit(limit)
-      .offset(offset);
+      .skip(offset)
+      .exec();
 
     return {
       schedules,
@@ -64,14 +53,8 @@ export class FeedingScheduleService {
   async getFeedingScheduleById(
     userId: string,
     id: string
-  ): Promise<FeedingSchedule | null> {
-    const [schedule] = await db
-      .select()
-      .from(feedingSchedules)
-      .where(
-        and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId))
-      );
-
+  ): Promise<any | null> {
+    const schedule = await FeedingScheduleModel.findOne({ _id: id, userId }).exec();
     return schedule ?? null;
   }
 
@@ -80,31 +63,18 @@ export class FeedingScheduleService {
    */
   async createFeedingSchedule(
     userId: string,
-    scheduleData: Omit<NewFeedingSchedule, 'id' | 'userId' | 'createdAt'>
-  ): Promise<FeedingSchedule> {
+    scheduleData: any
+  ): Promise<any> {
     // Verify pet exists and belongs to user
-    const [pet] = await db
-      .select()
-      .from(pets)
-      .where(and(eq(pets.id, scheduleData.petId), eq(pets.userId, userId)));
+    const pet = await PetModel.findOne({ _id: scheduleData.petId, userId }).exec();
 
     if (!pet) {
       throw new Error('Pet not found');
     }
 
-    const newSchedule: NewFeedingSchedule = {
-      id: generateId(),
-      userId,
-      ...scheduleData,
-      createdAt: new Date(),
-    };
+    const newSchedule = new FeedingScheduleModel({ ...scheduleData, userId });
+    const createdSchedule = await newSchedule.save();
 
-    const result = await db
-      .insert(feedingSchedules)
-      .values(newSchedule)
-      .returning();
-
-    const createdSchedule = result[0];
     if (!createdSchedule) {
       throw new Error('Failed to create feeding schedule');
     }
@@ -117,19 +87,17 @@ export class FeedingScheduleService {
   async updateFeedingSchedule(
     userId: string,
     id: string,
-    updates: Partial<NewFeedingSchedule>
-  ): Promise<FeedingSchedule | null> {
+    updates: Partial<any>
+  ): Promise<any | null> {
     // Don't allow updating userId
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId: _userId, ...safeUpdates } = updates;
 
-    const [updatedSchedule] = await db
-      .update(feedingSchedules)
-      .set(safeUpdates)
-      .where(
-        and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId))
-      )
-      .returning();
+    const updatedSchedule = await FeedingScheduleModel.findOneAndUpdate(
+      { _id: id, userId },
+      safeUpdates,
+      { new: true }
+    ).exec();
 
     return updatedSchedule ?? null;
   }
@@ -138,13 +106,7 @@ export class FeedingScheduleService {
    * Delete feeding schedule, ensuring it belongs to the user
    */
   async deleteFeedingSchedule(userId: string, id: string): Promise<boolean> {
-    const [deletedSchedule] = await db
-      .delete(feedingSchedules)
-      .where(
-        and(eq(feedingSchedules.id, id), eq(feedingSchedules.userId, userId))
-      )
-      .returning();
-
+    const deletedSchedule = await FeedingScheduleModel.findOneAndDelete({ _id: id, userId }).exec();
     return !!deletedSchedule;
   }
 
@@ -154,21 +116,19 @@ export class FeedingScheduleService {
   async getActiveSchedules(
     userId: string,
     petId?: string
-  ): Promise<FeedingSchedule[]> {
-    const conditions = [
-      eq(feedingSchedules.userId, userId),
-      eq(feedingSchedules.isActive, true),
-    ];
+  ): Promise<any[]> {
+    const whereClause: any = {
+      userId,
+      isActive: true
+    };
 
     if (petId) {
-      conditions.push(eq(feedingSchedules.petId, petId));
+      whereClause.petId = petId;
     }
 
-    return await db
-      .select()
-      .from(feedingSchedules)
-      .where(and(...conditions))
-      .orderBy(feedingSchedules.time);
+    return await FeedingScheduleModel.find(whereClause)
+      .sort({ time: 1 })
+      .exec();
   }
 
   /**
@@ -177,7 +137,7 @@ export class FeedingScheduleService {
   async getTodaySchedules(
     userId: string,
     petId?: string
-  ): Promise<FeedingSchedule[]> {
+  ): Promise<any[]> {
     // Use UTC date to get consistent day regardless of server timezone
     const today = new Date(toUTCISOString(new Date())).getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
     const dayNames = [
@@ -191,21 +151,19 @@ export class FeedingScheduleService {
     ];
     const todayName = dayNames[today];
 
-    const conditions = [
-      eq(feedingSchedules.userId, userId),
-      eq(feedingSchedules.isActive, true),
-      like(feedingSchedules.days, `%${todayName}%`),
-    ];
+    const whereClause: any = {
+      userId,
+      isActive: true,
+      days: { $regex: todayName, $options: 'i' }
+    };
 
     if (petId) {
-      conditions.push(eq(feedingSchedules.petId, petId));
+      whereClause.petId = petId;
     }
 
-    return await db
-      .select()
-      .from(feedingSchedules)
-      .where(and(...conditions))
-      .orderBy(feedingSchedules.time);
+    return await FeedingScheduleModel.find(whereClause)
+      .sort({ time: 1 })
+      .exec();
   }
 
   /**
@@ -214,7 +172,7 @@ export class FeedingScheduleService {
   async getNextFeedingTime(
     userId: string,
     petId?: string
-  ): Promise<FeedingSchedule | null> {
+  ): Promise<any | null> {
     // Use UTC date to get consistent day regardless of server timezone
     const today = new Date(toUTCISOString(new Date())).getUTCDay();
     const dayNames = [
@@ -228,23 +186,19 @@ export class FeedingScheduleService {
     ];
     const todayName = dayNames[today];
 
-    const conditions = [
-      eq(feedingSchedules.userId, userId),
-      eq(feedingSchedules.isActive, true),
-      like(feedingSchedules.days, `%${todayName}%`),
-    ];
+    const whereClause: any = {
+      userId,
+      isActive: true,
+      days: { $regex: todayName, $options: 'i' }
+    };
 
     if (petId) {
-      conditions.push(eq(feedingSchedules.petId, petId));
+      whereClause.petId = petId;
     }
 
-
-    const [schedule] = await db
-      .select()
-      .from(feedingSchedules)
-      .where(and(...conditions))
-      .orderBy(feedingSchedules.time)
-      .limit(1);
+    const schedule = await FeedingScheduleModel.findOne(whereClause)
+      .sort({ time: 1 })
+      .exec();
 
     return schedule ?? null;
   }

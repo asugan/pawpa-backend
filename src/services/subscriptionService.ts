@@ -1,11 +1,5 @@
-import { and, eq, gt } from 'drizzle-orm';
-import {
-  Subscription,
-  db,
-  deviceTrialRegistry,
-  subscriptions,
-} from '../config/database';
-import { generateId } from '../utils/id';
+import { SubscriptionModel } from '../models/mongoose/subscription';
+import { DeviceTrialRegistryModel } from '../models/mongoose/deviceTrialRegistry';
 import {
   SUBSCRIPTION_CONFIG,
   SUBSCRIPTION_PROVIDERS,
@@ -43,23 +37,15 @@ export class SubscriptionService {
     deviceId?: string
   ): Promise<UnifiedSubscriptionStatus> {
     // Get the user's active subscription (either internal trial or revenuecat)
-    const [subscription] = await db
-      .select()
-      .from(subscriptions)
-      .where(
-        and(
-          eq(subscriptions.userId, userId),
-          eq(subscriptions.status, SUBSCRIPTION_STATUSES.ACTIVE),
-          gt(subscriptions.expiresAt, new Date())
-        )
-      );
+    const subscription = await SubscriptionModel.findOne({
+      userId,
+      status: SUBSCRIPTION_STATUSES.ACTIVE,
+      expiresAt: { $gt: new Date() }
+    }).exec();
 
     if (!subscription) {
       // No active subscription - check if there's an expired one
-      const [expiredSubscription] = await db
-        .select()
-        .from(subscriptions)
-        .where(eq(subscriptions.userId, userId));
+      const expiredSubscription = await SubscriptionModel.findOne({ userId }).exec();
 
       // Check if device can start trial
       const canStartTrial = deviceId
@@ -103,11 +89,7 @@ export class SubscriptionService {
    * Check if a device has already used a trial
    */
   async checkDeviceCanStartTrial(deviceId: string): Promise<boolean> {
-    const [existingDevice] = await db
-      .select()
-      .from(deviceTrialRegistry)
-      .where(eq(deviceTrialRegistry.deviceId, deviceId));
-
+    const existingDevice = await DeviceTrialRegistryModel.findOne({ deviceId }).exec();
     return !existingDevice;
   }
 
@@ -115,10 +97,7 @@ export class SubscriptionService {
    * Check device eligibility with detailed info
    */
   async checkDeviceEligibility(deviceId: string): Promise<DeviceEligibility> {
-    const [existingDevice] = await db
-      .select()
-      .from(deviceTrialRegistry)
-      .where(eq(deviceTrialRegistry.deviceId, deviceId));
+    const existingDevice = await DeviceTrialRegistryModel.findOne({ deviceId }).exec();
 
     if (existingDevice) {
       return {
@@ -136,22 +115,16 @@ export class SubscriptionService {
   /**
    * Start an internal trial for a user
    */
-  async startTrial(userId: string, deviceId: string): Promise<Subscription> {
+  async startTrial(userId: string, deviceId: string): Promise<any> {
     // Check if user already has any subscription
-    const [existingSubscription] = await db
-      .select()
-      .from(subscriptions)
-      .where(eq(subscriptions.userId, userId));
+    const existingSubscription = await SubscriptionModel.findOne({ userId }).exec();
 
     if (existingSubscription) {
       throw new Error('User already has a subscription');
     }
 
     // Check if device has already used a trial
-    const [existingDevice] = await db
-      .select()
-      .from(deviceTrialRegistry)
-      .where(eq(deviceTrialRegistry.deviceId, deviceId));
+    const existingDevice = await DeviceTrialRegistryModel.findOne({ deviceId }).exec();
 
     if (existingDevice) {
       throw new Error('Device has already used a trial');
@@ -161,35 +134,31 @@ export class SubscriptionService {
     const expiresAt = SUBSCRIPTION_CONFIG.getTrialEndDate(now);
 
     // Create subscription with provider='internal'
-    const [newSubscription] = await db
-      .insert(subscriptions)
-      .values({
-        id: generateId(),
-        userId,
-        provider: SUBSCRIPTION_PROVIDERS.INTERNAL,
-        revenueCatId: null,
-        tier: SUBSCRIPTION_CONFIG.TIERS.PRO,
-        status: SUBSCRIPTION_STATUSES.ACTIVE,
-        expiresAt,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    const newSubscription = new SubscriptionModel({
+      userId,
+      provider: SUBSCRIPTION_PROVIDERS.INTERNAL,
+      revenueCatId: null,
+      tier: SUBSCRIPTION_CONFIG.TIERS.PRO,
+      status: SUBSCRIPTION_STATUSES.ACTIVE,
+      expiresAt,
+    });
 
-    if (!newSubscription) {
+    const savedSubscription = await newSubscription.save();
+
+    if (!savedSubscription) {
       throw new Error('Failed to create subscription');
     }
 
     // Register device to prevent future trials
-    await db.insert(deviceTrialRegistry).values({
-      id: generateId(),
+    const deviceTrial = new DeviceTrialRegistryModel({
       deviceId,
       firstTrialUserId: userId,
       trialUsedAt: now,
-      createdAt: now,
     });
 
-    return newSubscription;
+    await deviceTrial.save();
+
+    return savedSubscription;
   }
 
   /**
@@ -201,49 +170,42 @@ export class SubscriptionService {
     revenueCatId: string,
     expiresAt: Date,
     status: string
-  ): Promise<Subscription | null> {
+  ): Promise<any | null> {
     const now = new Date();
 
     // Check if user already has a subscription
-    const [existingSubscription] = await db
-      .select()
-      .from(subscriptions)
-      .where(eq(subscriptions.userId, userId));
+    const existingSubscription = await SubscriptionModel.findOne({ userId }).exec();
 
     if (existingSubscription) {
       // Update existing subscription to RevenueCat
-      const [updatedSubscription] = await db
-        .update(subscriptions)
-        .set({
+      const updatedSubscription = await SubscriptionModel.findOneAndUpdate(
+        { userId },
+        {
           provider: SUBSCRIPTION_PROVIDERS.REVENUECAT,
           revenueCatId,
           status,
           expiresAt,
           updatedAt: now,
-        })
-        .where(eq(subscriptions.id, existingSubscription.id))
-        .returning();
+        },
+        { new: true }
+      ).exec();
 
-      return updatedSubscription ?? null;
+      return updatedSubscription;
     }
 
     // Create new RevenueCat subscription
-    const [newSubscription] = await db
-      .insert(subscriptions)
-      .values({
-        id: generateId(),
-        userId,
-        provider: SUBSCRIPTION_PROVIDERS.REVENUECAT,
-        revenueCatId,
-        tier: SUBSCRIPTION_CONFIG.TIERS.PRO,
-        status,
-        expiresAt,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    const newSubscription = new SubscriptionModel({
+      userId,
+      provider: SUBSCRIPTION_PROVIDERS.REVENUECAT,
+      revenueCatId,
+      tier: SUBSCRIPTION_CONFIG.TIERS.PRO,
+      status,
+      expiresAt,
+    });
 
-    return newSubscription ?? null;
+    const savedSubscription = await newSubscription.save();
+
+    return savedSubscription;
   }
 
   /**
@@ -253,7 +215,7 @@ export class SubscriptionService {
     revenueCatId: string,
     status: string,
     expiresAt?: Date
-  ): Promise<Subscription | null> {
+  ): Promise<any | null> {
     const now = new Date();
 
     const updateData: { status: string; updatedAt: Date; expiresAt?: Date } = {
@@ -265,41 +227,35 @@ export class SubscriptionService {
       updateData.expiresAt = expiresAt;
     }
 
-    const [updatedSubscription] = await db
-      .update(subscriptions)
-      .set(updateData)
-      .where(eq(subscriptions.revenueCatId, revenueCatId))
-      .returning();
+    const updatedSubscription = await SubscriptionModel.findOneAndUpdate(
+      { revenueCatId },
+      updateData,
+      { new: true }
+    ).exec();
 
-    return updatedSubscription ?? null;
+    return updatedSubscription;
   }
 
   /**
    * Expire internal trial when user subscribes via RevenueCat
    */
   async expireInternalTrial(userId: string): Promise<boolean> {
-    const [subscription] = await db
-      .select()
-      .from(subscriptions)
-      .where(
-        and(
-          eq(subscriptions.userId, userId),
-          eq(subscriptions.provider, SUBSCRIPTION_PROVIDERS.INTERNAL),
-          eq(subscriptions.status, SUBSCRIPTION_STATUSES.ACTIVE)
-        )
-      );
+    const subscription = await SubscriptionModel.findOne({
+      userId,
+      provider: SUBSCRIPTION_PROVIDERS.INTERNAL,
+      status: SUBSCRIPTION_STATUSES.ACTIVE
+    }).exec();
 
     if (!subscription) {
       return false;
     }
 
-    await db
-      .update(subscriptions)
-      .set({
+    await SubscriptionModel.updateOne(
+      { _id: subscription._id },
+      {
         status: SUBSCRIPTION_STATUSES.EXPIRED,
         updatedAt: new Date(),
-      })
-      .where(eq(subscriptions.id, subscription.id));
+      });
 
     return true;
   }
@@ -307,12 +263,8 @@ export class SubscriptionService {
   /**
    * Get subscription by user ID
    */
-  async getSubscriptionByUserId(userId: string): Promise<Subscription | null> {
-    const [subscription] = await db
-      .select()
-      .from(subscriptions)
-      .where(eq(subscriptions.userId, userId));
-
+  async getSubscriptionByUserId(userId: string): Promise<any | null> {
+    const subscription = await SubscriptionModel.findOne({ userId }).exec();
     return subscription ?? null;
   }
 

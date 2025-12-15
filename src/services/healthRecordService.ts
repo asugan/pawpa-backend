@@ -1,8 +1,6 @@
-import { and, count, desc, eq, gte, lte } from 'drizzle-orm';
-import { db, healthRecords, pets } from '../config/database';
+import { HealthRecordModel } from '../models/mongoose/healthRecord';
+import { PetModel } from '../models/mongoose/pet';
 import { HealthRecordQueryParams } from '../types/api';
-import { HealthRecord, NewHealthRecord } from '../models/schema';
-import { generateId } from '../utils/id';
 import { parseUTCDate } from '../lib/dateUtils';
 
 export class HealthRecordService {
@@ -13,47 +11,40 @@ export class HealthRecordService {
     userId: string,
     petId?: string,
     params?: HealthRecordQueryParams
-  ): Promise<{ records: HealthRecord[]; total: number }> {
+  ): Promise<{ records: any[]; total: number }> {
     const { page = 1, limit = 10, type, startDate, endDate } = params ?? {};
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const conditions = [eq(healthRecords.userId, userId)];
+    const whereClause: any = { userId };
 
     if (petId) {
-      conditions.push(eq(healthRecords.petId, petId));
+      whereClause.petId = petId;
     }
 
     if (type) {
-      conditions.push(eq(healthRecords.type, type));
+      whereClause.type = type;
     }
 
-    if (startDate) {
-      conditions.push(gte(healthRecords.date, parseUTCDate(startDate)));
+    if (startDate || endDate) {
+      whereClause.date = {};
+      if (startDate) {
+        whereClause.date.$gte = parseUTCDate(startDate);
+      }
+      if (endDate) {
+        whereClause.date.$lte = parseUTCDate(endDate);
+      }
     }
-
-    if (endDate) {
-      conditions.push(lte(healthRecords.date, parseUTCDate(endDate)));
-    }
-
-    const whereClause = and(...conditions);
 
     // Get total count
-    const result = await db
-      .select({ total: count() })
-      .from(healthRecords)
-      .where(whereClause);
-
-    const total = result[0]?.total ?? 0;
+    const total = await HealthRecordModel.countDocuments(whereClause);
 
     // Get records with pagination
-    const records = await db
-      .select()
-      .from(healthRecords)
-      .where(whereClause)
-      .orderBy(desc(healthRecords.date))
+    const records = await HealthRecordModel.find(whereClause)
+      .sort({ date: -1 })
       .limit(limit)
-      .offset(offset);
+      .skip(offset)
+      .exec();
 
     return {
       records,
@@ -67,12 +58,8 @@ export class HealthRecordService {
   async getHealthRecordById(
     userId: string,
     id: string
-  ): Promise<HealthRecord | null> {
-    const [record] = await db
-      .select()
-      .from(healthRecords)
-      .where(and(eq(healthRecords.id, id), eq(healthRecords.userId, userId)));
-
+  ): Promise<any | null> {
+    const record = await HealthRecordModel.findOne({ _id: id, userId }).exec();
     return record ?? null;
   }
 
@@ -81,28 +68,18 @@ export class HealthRecordService {
    */
   async createHealthRecord(
     userId: string,
-    recordData: Omit<NewHealthRecord, 'id' | 'userId' | 'createdAt'>
-  ): Promise<HealthRecord> {
+    recordData: any
+  ): Promise<any> {
     // Verify pet exists and belongs to user
-    const [pet] = await db
-      .select()
-      .from(pets)
-      .where(and(eq(pets.id, recordData.petId), eq(pets.userId, userId)));
+    const pet = await PetModel.findOne({ _id: recordData.petId, userId }).exec();
 
     if (!pet) {
       throw new Error('Pet not found');
     }
 
-    const newRecord: NewHealthRecord = {
-      id: generateId(),
-      userId,
-      ...recordData,
-      createdAt: new Date(),
-    };
+    const newRecord = new HealthRecordModel({ ...recordData, userId });
+    const createdRecord = await newRecord.save();
 
-    const result = await db.insert(healthRecords).values(newRecord).returning();
-
-    const createdRecord = result[0];
     if (!createdRecord) {
       throw new Error('Failed to create health record');
     }
@@ -115,17 +92,17 @@ export class HealthRecordService {
   async updateHealthRecord(
     userId: string,
     id: string,
-    updates: Partial<NewHealthRecord>
-  ): Promise<HealthRecord | null> {
+    updates: Partial<any>
+  ): Promise<any | null> {
     // Don't allow updating userId
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId: _userId, ...safeUpdates } = updates;
 
-    const [updatedRecord] = await db
-      .update(healthRecords)
-      .set(safeUpdates)
-      .where(and(eq(healthRecords.id, id), eq(healthRecords.userId, userId)))
-      .returning();
+    const updatedRecord = await HealthRecordModel.findOneAndUpdate(
+      { _id: id, userId },
+      safeUpdates,
+      { new: true }
+    ).exec();
 
     return updatedRecord ?? null;
   }
@@ -134,11 +111,7 @@ export class HealthRecordService {
    * Delete health record, ensuring it belongs to the user
    */
   async deleteHealthRecord(userId: string, id: string): Promise<boolean> {
-    const [deletedRecord] = await db
-      .delete(healthRecords)
-      .where(and(eq(healthRecords.id, id), eq(healthRecords.userId, userId)))
-      .returning();
-
+    const deletedRecord = await HealthRecordModel.findOneAndDelete({ _id: id, userId }).exec();
     return !!deletedRecord;
   }
 
@@ -148,22 +121,20 @@ export class HealthRecordService {
   async getUpcomingVaccinations(
     userId: string,
     petId?: string
-  ): Promise<HealthRecord[]> {
+  ): Promise<any[]> {
     const now = new Date();
-    const conditions = [
-      eq(healthRecords.userId, userId),
-      eq(healthRecords.type, 'vaccination'),
-      gte(healthRecords.nextDueDate, now),
-    ];
+    const whereClause: any = {
+      userId,
+      type: 'vaccination',
+      nextDueDate: { $gte: now }
+    };
 
     if (petId) {
-      conditions.push(eq(healthRecords.petId, petId));
+      whereClause.petId = petId;
     }
 
-    return await db
-      .select()
-      .from(healthRecords)
-      .where(and(...conditions))
-      .orderBy(healthRecords.nextDueDate);
+    return await HealthRecordModel.find(whereClause)
+      .sort({ nextDueDate: 1 })
+      .exec();
   }
 }

@@ -1,15 +1,13 @@
-import { and, between, count, desc, eq, gte, lte, sum } from 'drizzle-orm';
-import { db, expenses, pets } from '../config/database';
+import { ExpenseModel } from '../models/mongoose/expense';
+import { PetModel } from '../models/mongoose/pet';
 import { ExpenseQueryParams } from '../types/api';
-import { Expense, NewExpense } from '../models/schema';
-import { generateId } from '../utils/id';
 
 export class ExpenseService {
   async getExpensesByPetId(
     userId: string,
     petId?: string,
     params?: ExpenseQueryParams
-  ): Promise<{ expenses: Expense[]; total: number }> {
+  ): Promise<{ expenses: any[]; total: number }> {
     const {
       page = 1,
       limit = 10,
@@ -24,59 +22,52 @@ export class ExpenseService {
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const conditions = [eq(expenses.userId, userId)];
+    const whereClause: any = { userId };
 
     // Only filter by petId if provided
     if (petId) {
-      conditions.push(eq(expenses.petId, petId));
+      whereClause.petId = petId;
     }
 
     if (category) {
-      conditions.push(eq(expenses.category, category));
+      whereClause.category = category;
     }
 
     if (currency) {
-      conditions.push(eq(expenses.currency, currency));
+      whereClause.currency = currency;
     }
 
     if (paymentMethod) {
-      conditions.push(eq(expenses.paymentMethod, paymentMethod));
+      whereClause.paymentMethod = paymentMethod;
     }
 
-    if (startDate) {
-      conditions.push(gte(expenses.date, new Date(startDate)));
-    }
-
-    if (endDate) {
-      conditions.push(lte(expenses.date, new Date(endDate)));
+    if (startDate || endDate) {
+      whereClause.date = {};
+      if (startDate) {
+        whereClause.date.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        whereClause.date.$lte = new Date(endDate);
+      }
     }
 
     if (minAmount !== undefined) {
-      conditions.push(gte(expenses.amount, minAmount));
+      whereClause.amount = { ...whereClause.amount, $gte: minAmount };
     }
 
     if (maxAmount !== undefined) {
-      conditions.push(lte(expenses.amount, maxAmount));
+      whereClause.amount = { ...whereClause.amount, $lte: maxAmount };
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
     // Get total count
-    const result = await db
-      .select({ total: count() })
-      .from(expenses)
-      .where(whereClause);
-
-    const total = result[0]?.total ?? 0;
+    const total = await ExpenseModel.countDocuments(whereClause);
 
     // Get expenses with pagination
-    const expenseList = await db
-      .select()
-      .from(expenses)
-      .where(whereClause)
-      .orderBy(desc(expenses.date))
+    const expenseList = await ExpenseModel.find(whereClause)
+      .sort({ date: -1 })
       .limit(limit)
-      .offset(offset);
+      .skip(offset)
+      .exec();
 
     return {
       expenses: expenseList,
@@ -84,39 +75,25 @@ export class ExpenseService {
     };
   }
 
-  async getExpenseById(userId: string, id: string): Promise<Expense | null> {
-    const [expense] = await db
-      .select()
-      .from(expenses)
-      .where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
-
+  async getExpenseById(userId: string, id: string): Promise<any | null> {
+    const expense = await ExpenseModel.findOne({ _id: id, userId }).exec();
     return expense ?? null;
   }
 
   async createExpense(
     userId: string,
-    expenseData: Omit<NewExpense, 'id' | 'userId' | 'createdAt'>
-  ): Promise<Expense> {
+    expenseData: any
+  ): Promise<any> {
     // Verify pet exists and belongs to user
-    const [pet] = await db
-      .select()
-      .from(pets)
-      .where(and(eq(pets.id, expenseData.petId), eq(pets.userId, userId)));
+    const pet = await PetModel.findOne({ _id: expenseData.petId, userId }).exec();
 
     if (!pet) {
       throw new Error('Pet not found');
     }
 
-    const newExpense: NewExpense = {
-      id: generateId(),
-      userId,
-      ...expenseData,
-      createdAt: new Date(),
-    };
+    const newExpense = new ExpenseModel({ ...expenseData, userId });
+    const createdExpense = await newExpense.save();
 
-    const result = await db.insert(expenses).values(newExpense).returning();
-
-    const createdExpense = result[0];
     if (!createdExpense) {
       throw new Error('Failed to create expense');
     }
@@ -126,27 +103,23 @@ export class ExpenseService {
   async updateExpense(
     userId: string,
     id: string,
-    updates: Partial<NewExpense>
-  ): Promise<Expense | null> {
+    updates: Partial<any>
+  ): Promise<any | null> {
     // Don't allow updating userId
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId: _userId, ...safeUpdates } = updates;
 
-    const [updatedExpense] = await db
-      .update(expenses)
-      .set(safeUpdates)
-      .where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
-      .returning();
+    const updatedExpense = await ExpenseModel.findOneAndUpdate(
+      { _id: id, userId },
+      safeUpdates,
+      { new: true }
+    ).exec();
 
     return updatedExpense ?? null;
   }
 
   async deleteExpense(userId: string, id: string): Promise<boolean> {
-    const [deletedExpense] = await db
-      .delete(expenses)
-      .where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
-      .returning();
-
+    const deletedExpense = await ExpenseModel.findOneAndDelete({ _id: id, userId }).exec();
     return !!deletedExpense;
   }
 
@@ -155,21 +128,22 @@ export class ExpenseService {
     petId: string | undefined,
     startDate: Date,
     endDate: Date
-  ): Promise<Expense[]> {
-    const conditions = [
-      eq(expenses.userId, userId),
-      between(expenses.date, startDate, endDate),
-    ];
+  ): Promise<any[]> {
+    const whereClause: any = {
+      userId,
+      date: {
+        $gte: startDate,
+        $lte: endDate
+      }
+    };
 
     if (petId) {
-      conditions.push(eq(expenses.petId, petId));
+      whereClause.petId = petId;
     }
 
-    return await db
-      .select()
-      .from(expenses)
-      .where(and(...conditions))
-      .orderBy(desc(expenses.date));
+    return await ExpenseModel.find(whereClause)
+      .sort({ date: -1 })
+      .exec();
   }
 
   async getExpenseStats(
@@ -185,73 +159,73 @@ export class ExpenseService {
     byCategory: { category: string; total: number; count: number }[];
     byCurrency: { currency: string; total: number }[];
   }> {
-    const conditions = [eq(expenses.userId, userId)];
+    const whereClause: any = { userId };
 
     if (petId) {
-      conditions.push(eq(expenses.petId, petId));
+      whereClause.petId = petId;
     }
 
-    if (startDate) {
-      conditions.push(gte(expenses.date, startDate));
-    }
-
-    if (endDate) {
-      conditions.push(lte(expenses.date, endDate));
+    if (startDate || endDate) {
+      whereClause.date = {};
+      if (startDate) {
+        whereClause.date.$gte = startDate;
+      }
+      if (endDate) {
+        whereClause.date.$lte = endDate;
+      }
     }
 
     if (category) {
-      conditions.push(eq(expenses.category, category));
+      whereClause.category = category;
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
     // Get total and count
-    const totalResult = await db
-      .select({
-        total: sum(expenses.amount),
-        count: count(),
-      })
-      .from(expenses)
-      .where(whereClause);
+    const [totalResult] = await ExpenseModel.aggregate([
+      { $match: whereClause },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
 
-    const total = Number(totalResult[0]?.total ?? 0);
-    const expenseCount = totalResult[0]?.count ?? 0;
+    const total = totalResult?.total ?? 0;
+    const expenseCount = totalResult?.count ?? 0;
     const average = expenseCount > 0 ? total / expenseCount : 0;
 
     // Get stats by category
-    const byCategory = await db
-      .select({
-        category: expenses.category,
-        total: sum(expenses.amount),
-        count: count(),
-      })
-      .from(expenses)
-      .where(whereClause)
-      .groupBy(expenses.category);
+    const byCategory = await ExpenseModel.aggregate([
+      { $match: whereClause },
+      {
+        $group: {
+          _id: '$category',
+          total: { $sum: '$amount' },
+          count: { $sum: 1 },
+        },
+      },
+      { $project: { _id: 0, category: '$_id', total: 1, count: 1 } },
+    ]);
 
     // Get stats by currency
-    const byCurrency = await db
-      .select({
-        currency: expenses.currency,
-        total: sum(expenses.amount),
-      })
-      .from(expenses)
-      .where(whereClause)
-      .groupBy(expenses.currency);
+    const byCurrency = await ExpenseModel.aggregate([
+      { $match: whereClause },
+      {
+        $group: {
+          _id: '$currency',
+          total: { $sum: '$amount' },
+        },
+      },
+      { $project: { _id: 0, currency: '$_id', total: 1 } },
+    ]);
 
     return {
       total,
       count: expenseCount,
       average,
-      byCategory: byCategory.map(item => ({
-        category: item.category,
-        total: Number(item.total ?? 0),
-        count: item.count,
-      })),
-      byCurrency: byCurrency.map(item => ({
-        currency: item.currency,
-        total: Number(item.total ?? 0),
-      })),
+      byCategory,
+      byCurrency,
     };
   }
 
@@ -260,7 +234,7 @@ export class ExpenseService {
     petId?: string,
     year?: number,
     month?: number
-  ): Promise<Expense[]> {
+  ): Promise<any[]> {
     const now = new Date();
     const targetYear = year ?? now.getFullYear();
     const targetMonth = month ?? now.getMonth();
@@ -275,7 +249,7 @@ export class ExpenseService {
     userId: string,
     petId?: string,
     year?: number
-  ): Promise<Expense[]> {
+  ): Promise<any[]> {
     const now = new Date();
     const targetYear = year ?? now.getFullYear();
 
@@ -289,21 +263,19 @@ export class ExpenseService {
     userId: string,
     category: string,
     petId?: string
-  ): Promise<Expense[]> {
-    const conditions = [
-      eq(expenses.userId, userId),
-      eq(expenses.category, category),
-    ];
+  ): Promise<any[]> {
+    const whereClause: any = {
+      userId,
+      category
+    };
 
     if (petId) {
-      conditions.push(eq(expenses.petId, petId));
+      whereClause.petId = petId;
     }
 
-    return await db
-      .select()
-      .from(expenses)
-      .where(and(...conditions))
-      .orderBy(desc(expenses.date));
+    return await ExpenseModel.find(whereClause)
+      .sort({ date: -1 })
+      .exec();
   }
 
   async exportExpensesCSV(
@@ -312,27 +284,25 @@ export class ExpenseService {
     startDate?: Date,
     endDate?: Date
   ): Promise<string> {
-    const conditions = [eq(expenses.userId, userId)];
+    const whereClause: any = { userId };
 
     if (petId) {
-      conditions.push(eq(expenses.petId, petId));
+      whereClause.petId = petId;
     }
 
-    if (startDate) {
-      conditions.push(gte(expenses.date, startDate));
+    if (startDate || endDate) {
+      whereClause.date = {};
+      if (startDate) {
+        whereClause.date.$gte = startDate;
+      }
+      if (endDate) {
+        whereClause.date.$lte = endDate;
+      }
     }
 
-    if (endDate) {
-      conditions.push(lte(expenses.date, endDate));
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-    const expenseList = await db
-      .select()
-      .from(expenses)
-      .where(whereClause)
-      .orderBy(desc(expenses.date));
+    const expenseList = await ExpenseModel.find(whereClause)
+      .sort({ date: -1 })
+      .exec();
 
     // Generate CSV
     const headers = [

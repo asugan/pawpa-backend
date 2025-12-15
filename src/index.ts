@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import app from './app';
 
 // Load environment variables
@@ -6,8 +7,27 @@ dotenv.config();
 
 const PORT = process.env.PORT ?? 3000;
 
-const startServer = () => {
+const startServer = async () => {
   try {
+    // MongoDB connection setup
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+      throw new Error('MONGODB_URI environment variable is not defined');
+    }
+
+    // Connect to MongoDB
+    await mongoose.connect(mongoUri);
+    console.log('Connected to MongoDB');
+
+    // Handle connection events
+    mongoose.connection.on('error', (err) => {
+      console.error('MongoDB connection error:', err);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.warn('MongoDB disconnected');
+    });
+
     const server = app.listen(PORT, () => {
       console.log(`🚀 PawPa Backend Server is running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV ?? 'development'}`);

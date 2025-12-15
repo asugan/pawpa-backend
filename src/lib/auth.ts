@@ -1,18 +1,26 @@
 import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { db } from '../config/database';
-import * as schema from '../models/schema';
+import { mongodbAdapter } from 'better-auth/adapters/mongodb';
+import { MongoClient } from 'mongodb';
+
+// Create MongoDB client
+const client = new MongoClient(process.env.MONGODB_URI!);
+const db = client.db(); // Uses database name from connection string
 
 export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: 'sqlite',
-    schema: {
-      user: schema.user,
-      session: schema.session,
-      account: schema.account,
-      verification: schema.verification,
-    },
+  database: mongodbAdapter(db, {
+    client: client,        // Enables transactions
+    usePlural: false,      // Use singular collection names
+    transaction: true      // Enable MongoDB transactions
   }),
+  secret: process.env.AUTH_SECRET!,
+  baseURL: process.env.BETTER_AUTH_URL,
+  trustedOrigins: [
+    'http://localhost:8081',
+    'http://localhost:3000',
+    'capacitor://localhost',
+    'pawpa://',
+    'exp://'
+  ],
   emailAndPassword: {
     enabled: true,
   },
@@ -28,23 +36,23 @@ export const auth = betterAuth({
     },
   },
   */
-  trustedOrigins: [
-    process.env.CORS_ORIGIN ?? 'http://localhost:3001',
-    'https://appleid.apple.com',
-    'pawpa://', // Mobile app deep link
-    'exp://', // Expo Go development
-    'http://localhost:8081', // Expo Metro bundler
+  socialProviders: {
+    // Add providers when ready
+  },
+  plugins: [
+    // Your existing plugins (apiKey, admin, etc.)
   ],
-  advanced: {
-    // Allow null origin from mobile apps (React Native doesn't send Origin header)
-    // This is safe because mobile apps can't have traditional CSRF attacks
-    disableOriginCheck: true,
+  rateLimit: {
+    storage: "database", // Uses MongoDB for rate limiting storage
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
   },
 });
+
+// Make sure to export the client for reuse
+export { client };
 
 // Export auth type for type inference
 export type Auth = typeof auth;

@@ -1,8 +1,6 @@
-import { and, count, eq, gte, lte } from 'drizzle-orm';
-import { db, events, pets } from '../config/database';
+import { EventModel } from '../models/mongoose/event';
+import { PetModel } from '../models/mongoose/pet';
 import { EventQueryParams } from '../types/api';
-import { Event, NewEvent } from '../models/schema';
-import { generateId } from '../utils/id';
 import {
   getUTCTodayBoundaries,
   getUTCUpcomingBoundaries,
@@ -17,47 +15,40 @@ export class EventService {
     userId: string,
     petId?: string,
     params?: EventQueryParams
-  ): Promise<{ events: Event[]; total: number }> {
+  ): Promise<{ events: any[]; total: number }> {
     const { page = 1, limit = 10, type, startDate, endDate } = params ?? {};
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const conditions = [eq(events.userId, userId)];
+    const whereClause: any = { userId };
 
     if (petId) {
-      conditions.push(eq(events.petId, petId));
+      whereClause.petId = petId;
     }
 
     if (type) {
-      conditions.push(eq(events.type, type));
+      whereClause.type = type;
     }
 
-    if (startDate) {
-      conditions.push(gte(events.startTime, parseUTCDate(startDate)));
+    if (startDate || endDate) {
+      whereClause.startTime = {};
+      if (startDate) {
+        whereClause.startTime.$gte = parseUTCDate(startDate);
+      }
+      if (endDate) {
+        whereClause.startTime.$lte = parseUTCDate(endDate);
+      }
     }
-
-    if (endDate) {
-      conditions.push(lte(events.startTime, parseUTCDate(endDate)));
-    }
-
-    const whereClause = and(...conditions);
 
     // Get total count
-    const result = await db
-      .select({ total: count() })
-      .from(events)
-      .where(whereClause);
-
-    const total = result[0]?.total ?? 0;
+    const total = await EventModel.countDocuments(whereClause);
 
     // Get events with pagination
-    const eventsList = await db
-      .select()
-      .from(events)
-      .where(whereClause)
-      .orderBy(events.startTime)
+    const eventsList = await EventModel.find(whereClause)
+      .sort({ startTime: 1 })
       .limit(limit)
-      .offset(offset);
+      .skip(offset)
+      .exec();
 
     return {
       events: eventsList,
@@ -72,7 +63,7 @@ export class EventService {
     userId: string,
     date: string,
     params: EventQueryParams
-  ): Promise<{ events: Event[]; total: number }> {
+  ): Promise<{ events: any[]; total: number }> {
     const { page = 1, limit = 10, type } = params;
     const offset = (page - 1) * limit;
 
@@ -82,34 +73,27 @@ export class EventService {
     endDate.setUTCDate(endDate.getUTCDate() + 1);
 
     // Build where conditions using UTC boundaries
-    const conditions = [
-      eq(events.userId, userId),
-      gte(events.startTime, startDate),
-      lte(events.startTime, endDate),
-    ];
+    const whereClause: any = {
+      userId,
+      startTime: {
+        $gte: startDate,
+        $lt: endDate
+      }
+    };
 
     if (type) {
-      conditions.push(eq(events.type, type));
+      whereClause.type = type;
     }
 
-    const whereClause = and(...conditions);
-
     // Get total count
-    const result = await db
-      .select({ total: count() })
-      .from(events)
-      .where(whereClause);
-
-    const total = result[0]?.total ?? 0;
+    const total = await EventModel.countDocuments(whereClause);
 
     // Get events with pagination
-    const eventsList = await db
-      .select()
-      .from(events)
-      .where(whereClause)
-      .orderBy(events.startTime)
+    const eventsList = await EventModel.find(whereClause)
+      .sort({ startTime: 1 })
       .limit(limit)
-      .offset(offset);
+      .skip(offset)
+      .exec();
 
     return {
       events: eventsList,
@@ -120,12 +104,8 @@ export class EventService {
   /**
    * Get event by ID, ensuring it belongs to the user
    */
-  async getEventById(userId: string, id: string): Promise<Event | null> {
-    const [event] = await db
-      .select()
-      .from(events)
-      .where(and(eq(events.id, id), eq(events.userId, userId)));
-
+  async getEventById(userId: string, id: string): Promise<any | null> {
+    const event = await EventModel.findOne({ _id: id, userId }).exec();
     return event ?? null;
   }
 
@@ -134,28 +114,18 @@ export class EventService {
    */
   async createEvent(
     userId: string,
-    eventData: Omit<NewEvent, 'id' | 'userId' | 'createdAt'>
-  ): Promise<Event> {
+    eventData: any
+  ): Promise<any> {
     // Verify pet exists and belongs to user
-    const [pet] = await db
-      .select()
-      .from(pets)
-      .where(and(eq(pets.id, eventData.petId), eq(pets.userId, userId)));
+    const pet = await PetModel.findOne({ _id: eventData.petId, userId }).exec();
 
     if (!pet) {
       throw new Error('Pet not found');
     }
 
-    const newEvent: NewEvent = {
-      id: generateId(),
-      userId,
-      ...eventData,
-      createdAt: new Date(),
-    };
+    const newEvent = new EventModel({ ...eventData, userId });
+    const createdEvent = await newEvent.save();
 
-    const result = await db.insert(events).values(newEvent).returning();
-
-    const createdEvent = result[0];
     if (!createdEvent) {
       throw new Error('Failed to create event');
     }
@@ -168,17 +138,17 @@ export class EventService {
   async updateEvent(
     userId: string,
     id: string,
-    updates: Partial<NewEvent>
-  ): Promise<Event | null> {
+    updates: Partial<any>
+  ): Promise<any | null> {
     // Don't allow updating userId
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId: _userId, ...safeUpdates } = updates;
 
-    const [updatedEvent] = await db
-      .update(events)
-      .set(safeUpdates)
-      .where(and(eq(events.id, id), eq(events.userId, userId)))
-      .returning();
+    const updatedEvent = await EventModel.findOneAndUpdate(
+      { _id: id, userId },
+      safeUpdates,
+      { new: true }
+    ).exec();
 
     return updatedEvent ?? null;
   }
@@ -187,11 +157,7 @@ export class EventService {
    * Delete event, ensuring it belongs to the user
    */
   async deleteEvent(userId: string, id: string): Promise<boolean> {
-    const [deletedEvent] = await db
-      .delete(events)
-      .where(and(eq(events.id, id), eq(events.userId, userId)))
-      .returning();
-
+    const deletedEvent = await EventModel.findOneAndDelete({ _id: id, userId }).exec();
     return !!deletedEvent;
   }
 
@@ -206,7 +172,7 @@ export class EventService {
     userId: string,
     petId?: string,
     days = 7
-  ): Promise<Event[]> {
+  ): Promise<any[]> {
     // Parameter validation
     if (days < 1) {
       throw new Error('Days parameter must be at least 1');
@@ -218,43 +184,43 @@ export class EventService {
     // Get UTC boundaries for the date range
     const boundaries = getUTCUpcomingBoundaries(days);
 
-    const conditions = [
-      eq(events.userId, userId),
-      gte(events.startTime, new Date(boundaries.gte)),
-      lte(events.startTime, new Date(boundaries.lte)),
-    ];
+    const whereClause: any = {
+      userId,
+      startTime: {
+        $gte: new Date(boundaries.gte),
+        $lte: new Date(boundaries.lte)
+      }
+    };
 
     if (petId) {
-      conditions.push(eq(events.petId, petId));
+      whereClause.petId = petId;
     }
 
-    return await db
-      .select()
-      .from(events)
-      .where(and(...conditions))
-      .orderBy(events.startTime);
+    return await EventModel.find(whereClause)
+      .sort({ startTime: 1 })
+      .exec();
   }
 
   /**
    * Get today's events for a user (UTC-based)
    */
-  async getTodayEvents(userId: string, petId?: string): Promise<Event[]> {
+  async getTodayEvents(userId: string, petId?: string): Promise<any[]> {
     const todayBoundary = getUTCTodayBoundaries();
 
-    const conditions = [
-      eq(events.userId, userId),
-      gte(events.startTime, new Date(todayBoundary.gte)),
-      lte(events.startTime, new Date(todayBoundary.lte)),
-    ];
+    const whereClause: any = {
+      userId,
+      startTime: {
+        $gte: new Date(todayBoundary.gte),
+        $lte: new Date(todayBoundary.lte)
+      }
+    };
 
     if (petId) {
-      conditions.push(eq(events.petId, petId));
+      whereClause.petId = petId;
     }
 
-    return await db
-      .select()
-      .from(events)
-      .where(and(...conditions))
-      .orderBy(events.startTime);
+    return await EventModel.find(whereClause)
+      .sort({ startTime: 1 })
+      .exec();
   }
 }

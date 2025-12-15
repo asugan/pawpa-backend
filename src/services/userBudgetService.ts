@@ -1,7 +1,6 @@
-import { and, desc, eq, gte, lte } from 'drizzle-orm';
-import { db, expenses, pets, userBudgets } from '../config/database';
-import { NewUserBudget, UserBudget } from '../models/schema';
-import { generateId } from '../utils/id';
+import { UserBudgetModel } from '../models/mongoose/userBudget';
+import { ExpenseModel } from '../models/mongoose/expense';
+import { PetModel } from '../models/mongoose/pet';
 
 // Input types for UserBudget operations
 export interface SetUserBudgetInput {
@@ -13,7 +12,7 @@ export interface SetUserBudgetInput {
 
 // Budget status interface with pet breakdown
 export interface BudgetStatus {
-  budget: UserBudget;
+  budget: any;
   currentSpending: number;
   percentage: number;
   remainingAmount: number;
@@ -27,7 +26,7 @@ export interface BudgetStatus {
 
 // Budget alert interface
 export interface BudgetAlert {
-  budget: UserBudget;
+  budget: any;
   currentSpending: number;
   percentage: number;
   isExceeded: boolean;
@@ -43,12 +42,8 @@ export class UserBudgetService {
   /**
    * Get budget by userId (sadece bir record dönecek)
    */
-  async getBudgetByUserId(userId: string): Promise<UserBudget | null> {
-    const [budget] = await db
-      .select()
-      .from(userBudgets)
-      .where(eq(userBudgets.userId, userId));
-
+  async getBudgetByUserId(userId: string): Promise<any | null> {
+    const budget = await UserBudgetModel.findOne({ userId }).exec();
     return budget ?? null;
   }
 
@@ -58,7 +53,7 @@ export class UserBudgetService {
   async setUserBudget(
     userId: string,
     data: SetUserBudgetInput
-  ): Promise<UserBudget> {
+  ): Promise<any> {
     // Validate input
     if (!data.amount || data.amount <= 0) {
       throw new Error('Budget amount must be greater than 0');
@@ -81,11 +76,11 @@ export class UserBudgetService {
         updatedAt: new Date(),
       };
 
-      const [updatedBudget] = await db
-        .update(userBudgets)
-        .set(updatedBudgetData)
-        .where(eq(userBudgets.userId, userId))
-        .returning();
+      const updatedBudget = await UserBudgetModel.findOneAndUpdate(
+        { userId },
+        updatedBudgetData,
+        { new: true }
+      ).exec();
 
       if (!updatedBudget) {
         throw new Error('Failed to update budget');
@@ -94,20 +89,16 @@ export class UserBudgetService {
       return updatedBudget;
     } else {
       // Create new budget
-      const newBudget: NewUserBudget = {
-        id: generateId(),
+      const newBudget = new UserBudgetModel({
         userId,
         amount: data.amount,
         currency: data.currency,
         alertThreshold: data.alertThreshold ?? 0.8,
         isActive: data.isActive ?? true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
-      const result = await db.insert(userBudgets).values(newBudget).returning();
+      const createdBudget = await newBudget.save();
 
-      const createdBudget = result[0];
       if (!createdBudget) {
         throw new Error('Failed to create budget');
       }
@@ -120,11 +111,7 @@ export class UserBudgetService {
    * Delete user budget
    */
   async deleteUserBudget(userId: string): Promise<boolean> {
-    const [deletedBudget] = await db
-      .delete(userBudgets)
-      .where(eq(userBudgets.userId, userId))
-      .returning();
-
+    const deletedBudget = await UserBudgetModel.findOneAndDelete({ userId }).exec();
     return !!deletedBudget;
   }
 
@@ -150,40 +137,51 @@ export class UserBudgetService {
     );
 
     // Get all expenses for the user in current month with matching currency
-    const monthlyExpenses = await db
-      .select({
-        expenseId: expenses.id,
-        petId: expenses.petId,
-        amount: expenses.amount,
-        description: expenses.description,
-        date: expenses.date,
-        petName: pets.name,
-      })
-      .from(expenses)
-      .innerJoin(pets, eq(expenses.petId, pets.id))
-      .where(
-        and(
-          eq(expenses.userId, userId),
-          eq(expenses.currency, budget.currency),
-          gte(expenses.date, startDate),
-          lte(expenses.date, endDate)
-        )
-      );
+    const monthlyExpenses = await ExpenseModel.aggregate([
+      {
+        $match: {
+          userId: userId,
+          currency: budget.currency,
+          date: {
+            $gte: startDate,
+            $lte: endDate
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'pets',
+          localField: 'petId',
+          foreignField: '_id',
+          as: 'pet'
+        }
+      },
+      { $unwind: '$pet' },
+      {
+        $project: {
+          petId: '$petId',
+          amount: 1,
+          description: 1,
+          date: 1,
+          petName: '$pet.name'
+        }
+      }
+    ]);
 
     // Calculate total spending
     const currentSpending = monthlyExpenses.reduce(
-      (sum, expense) => sum + expense.amount,
+      (sum: number, expense: any) => sum + expense.amount,
       0
     );
 
     const percentage =
       budget.amount > 0 ? (currentSpending / budget.amount) * 100 : 0;
     const remainingAmount = budget.amount - currentSpending;
-    const isAlert = percentage >= budget.alertThreshold * 100;
+    const isAlert = percentage >= budget.alertThreshold! * 100;
 
     // Calculate pet breakdown
     const petBreakdown = monthlyExpenses.reduce(
-      (acc, expense) => {
+      (acc: any[], expense: any) => {
         const existing = acc.find(item => item.petId === expense.petId);
         if (existing) {
           existing.spending += expense.amount;
@@ -232,12 +230,10 @@ export class UserBudgetService {
   /**
    * Get all active user budgets (for admin purposes)
    */
-  async getActiveUserBudgets(): Promise<UserBudget[]> {
-    return await db
-      .select()
-      .from(userBudgets)
-      .where(eq(userBudgets.isActive, true))
-      .orderBy(desc(userBudgets.updatedAt));
+  async getActiveUserBudgets(): Promise<any[]> {
+    return await UserBudgetModel.find({ isActive: true })
+      .sort({ updatedAt: -1 })
+      .exec();
   }
 
   /**
