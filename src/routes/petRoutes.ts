@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { PetController } from '../controllers/petController';
 import { validateRequest } from '../middleware/validation';
 import { z } from 'zod';
+import { validateObjectId } from '../utils/mongodb-validation';
 
 const router = Router();
 const petController = new PetController();
@@ -26,21 +27,22 @@ const updatePhotoSchema = z.object({
 // Routes
 router.get('/', petController.getAllPets);
 
-router.get('/:id', petController.getPetById);
+router.get('/:id', validateObjectId(), petController.getPetById);
 
 router.post('/', validateRequest(createPetSchema), petController.createPet);
 
-router.put('/:id', validateRequest(updatePetSchema), petController.updatePet);
+router.put('/:id', validateObjectId(), validateRequest(updatePetSchema), petController.updatePet);
 
-router.delete('/:id', petController.deletePet);
+router.delete('/:id', validateObjectId(), petController.deletePet);
 
 router.post(
   '/:id/photo',
+  validateObjectId(),
   validateRequest(updatePhotoSchema),
   petController.updatePetPhoto
 );
 
 // Health records sub-routes
-router.get('/:id/health-records', petController.getPetHealthRecords);
+router.get('/:id/health-records', validateObjectId(), petController.getPetHealthRecords);
 
 export default router;

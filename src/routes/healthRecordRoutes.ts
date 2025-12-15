@@ -3,13 +3,14 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { HealthRecordController } from '../controllers/healthRecordController';
 import { validateRequest } from '../middleware/validation';
 import { z } from 'zod';
+import { validateObjectId } from '../utils/mongodb-validation';
 
 const router = Router({ mergeParams: true });
 const healthRecordController = new HealthRecordController();
 
 // Validation schemas
 const createHealthRecordSchema = z.object({
-  petId: z.string().min(1, 'Pet ID is required'),
+  petId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid pet ID format'),
   type: z.enum([
     'vaccination',
     'checkup',
@@ -57,7 +58,7 @@ router.get('/', (req: AuthenticatedRequest, res: Response, next: NextFunction) =
   }
 });
 
-router.get('/:id', healthRecordController.getHealthRecordById);
+router.get('/:id', validateObjectId(), healthRecordController.getHealthRecordById);
 
 router.post(
   '/',
@@ -67,10 +68,11 @@ router.post(
 
 router.put(
   '/:id',
+  validateObjectId(),
   validateRequest(updateHealthRecordSchema),
   healthRecordController.updateHealthRecord
 );
 
-router.delete('/:id', healthRecordController.deleteHealthRecord);
+router.delete('/:id', validateObjectId(), healthRecordController.deleteHealthRecord);
 
 export default router;

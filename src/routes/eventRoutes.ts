@@ -2,13 +2,14 @@ import { Router } from 'express';
 import { EventController } from '../controllers/eventController';
 import { validateRequest } from '../middleware/validation';
 import { z } from 'zod';
+import { validateObjectId } from '../utils/mongodb-validation';
 
 const router = Router({ mergeParams: true });
 const eventController = new EventController();
 
 // Validation schemas
 const createEventSchema = z.object({
-  petId: z.string().min(1, 'Pet ID is required'),
+  petId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid pet ID format'),
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   type: z.string().min(1, 'Type is required'),
@@ -40,7 +41,7 @@ router.get(
 
 router.get('/', eventController.getEventsByPetId);
 
-router.get('/:id', eventController.getEventById);
+router.get('/:id', validateObjectId(), eventController.getEventById);
 
 router.post(
   '/',
@@ -50,10 +51,11 @@ router.post(
 
 router.put(
   '/:id',
+  validateObjectId(),
   validateRequest(updateEventSchema),
   eventController.updateEvent
 );
 
-router.delete('/:id', eventController.deleteEvent);
+router.delete('/:id', validateObjectId(), eventController.deleteEvent);
 
 export default router;

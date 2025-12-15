@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { ExpenseController } from '../controllers/expenseController';
 import { validateRequest } from '../middleware/validation';
 import { z } from 'zod';
+import { validateObjectId } from '../utils/mongodb-validation';
 
 const router = Router({ mergeParams: true });
 const expenseController = new ExpenseController();
@@ -30,7 +31,7 @@ const paymentMethods = [
 ] as const;
 
 const createExpenseSchema = z.object({
-  petId: z.string().min(1, 'Pet ID is required'),
+  petId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid pet ID format'),
   category: z.enum(expenseCategories, { message: 'Invalid category' }),
   amount: z.number().positive('Amount must be positive'),
   currency: z
@@ -70,7 +71,7 @@ router.get('/by-category/:category', expenseController.getExpensesByCategory);
 
 // Standard CRUD routes
 router.get('/', expenseController.getExpensesByPetId);
-router.get('/:id', expenseController.getExpenseById);
+router.get('/:id', validateObjectId(), expenseController.getExpenseById);
 router.post(
   '/',
   validateRequest(createExpenseSchema),
@@ -78,9 +79,10 @@ router.post(
 );
 router.put(
   '/:id',
+  validateObjectId(),
   validateRequest(updateExpenseSchema),
   expenseController.updateExpense
 );
-router.delete('/:id', expenseController.deleteExpense);
+router.delete('/:id', validateObjectId(), expenseController.deleteExpense);
 
 export default router;

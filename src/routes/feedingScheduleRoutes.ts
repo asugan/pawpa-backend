@@ -2,13 +2,14 @@ import { Router } from 'express';
 import { FeedingScheduleController } from '../controllers/feedingScheduleController';
 import { validateRequest } from '../middleware/validation';
 import { z } from 'zod';
+import { validateObjectId } from '../utils/mongodb-validation';
 
 const router = Router({ mergeParams: true });
 const feedingScheduleController = new FeedingScheduleController();
 
 // Validation schemas
 const createFeedingScheduleSchema = z.object({
-  petId: z.string().min(1, 'Pet ID is required'),
+  petId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid pet ID format'),
   time: z
     .string()
     .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),
@@ -29,7 +30,7 @@ router.get('/next', feedingScheduleController.getNextFeedingTime);
 
 router.get('/', feedingScheduleController.getFeedingSchedulesByPetId);
 
-router.get('/:id', feedingScheduleController.getFeedingScheduleById);
+router.get('/:id', validateObjectId(), feedingScheduleController.getFeedingScheduleById);
 
 router.post(
   '/',
@@ -39,10 +40,11 @@ router.post(
 
 router.put(
   '/:id',
+  validateObjectId(),
   validateRequest(updateFeedingScheduleSchema),
   feedingScheduleController.updateFeedingSchedule
 );
 
-router.delete('/:id', feedingScheduleController.deleteFeedingSchedule);
+router.delete('/:id', validateObjectId(), feedingScheduleController.deleteFeedingSchedule);
 
 export default router;
