@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose';
+import { ISubscriptionDocument } from './types';
 
-const subscriptionSchema = new Schema({
+const subscriptionSchema = new Schema<ISubscriptionDocument>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   provider: { type: String, default: 'internal' }, // 'internal' | 'revenuecat'
   revenueCatId: String, // nullable, only for revenuecat subscriptions
@@ -15,4 +16,4 @@ const subscriptionSchema = new Schema({
 subscriptionSchema.index({ userId: 1, status: 1 });
 subscriptionSchema.index({ userId: 1, expiresAt: 1 });
 
-export const SubscriptionModel = model('Subscription', subscriptionSchema);
+export const SubscriptionModel = model<ISubscriptionDocument>('Subscription', subscriptionSchema);

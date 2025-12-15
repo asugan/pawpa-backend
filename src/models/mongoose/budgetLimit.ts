@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose';
+import { IBudgetLimitDocument } from './types';
 
-const budgetLimitSchema = new Schema({
+const budgetLimitSchema = new Schema<IBudgetLimitDocument>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   petId: { type: Schema.Types.ObjectId, ref: 'Pet', required: true, index: true },
   category: String, // null = overall budget
@@ -17,4 +18,4 @@ const budgetLimitSchema = new Schema({
 budgetLimitSchema.index({ userId: 1, petId: 1 });
 budgetLimitSchema.index({ userId: 1, category: 1 });
 
-export const BudgetLimitModel = model('BudgetLimit', budgetLimitSchema);
+export const BudgetLimitModel = model<IBudgetLimitDocument>('BudgetLimit', budgetLimitSchema);

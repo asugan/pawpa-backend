@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose';
+import { IEventDocument } from './types';
 
-const eventSchema = new Schema({
+const eventSchema = new Schema<IEventDocument>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   petId: { type: Schema.Types.ObjectId, ref: 'Pet', required: true, index: true },
   title: { type: String, required: true },
@@ -19,4 +20,4 @@ const eventSchema = new Schema({
 eventSchema.index({ userId: 1, petId: 1 });
 eventSchema.index({ userId: 1, startTime: 1 });
 
-export const EventModel = model('Event', eventSchema);
+export const EventModel = model<IEventDocument>('Event', eventSchema);

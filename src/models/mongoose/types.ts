@@ -1,0 +1,136 @@
+import { Document, Types } from 'mongoose';
+
+// Pet Document Interface
+export interface IPetDocument extends Document {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  name: string;
+  type: string;
+  breed?: string;
+  birthDate?: Date;
+  weight?: number;
+  gender?: 'male' | 'female' | 'other';
+  profilePhoto?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Health Record Document Interface
+export interface IHealthRecordDocument extends Document {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  petId: Types.ObjectId;
+  type: string;
+  title: string;
+  description?: string;
+  date: Date;
+  veterinarian?: string;
+  clinic?: string;
+  cost?: number;
+  nextDueDate?: Date;
+  attachments?: string;
+  vaccineName?: string;
+  vaccineManufacturer?: string;
+  batchNumber?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Event Document Interface
+export interface IEventDocument extends Document {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  petId: Types.ObjectId;
+  title: string;
+  description?: string;
+  type: string;
+  startTime: Date;
+  endTime?: Date;
+  location?: string;
+  notes?: string;
+  reminder: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Feeding Schedule Document Interface
+export interface IFeedingScheduleDocument extends Document {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  petId: Types.ObjectId;
+  time: string;
+  foodType: string;
+  amount: string;
+  days: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Expense Document Interface
+export interface IExpenseDocument extends Document {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  petId: Types.ObjectId;
+  category: string;
+  amount: number;
+  currency: string;
+  paymentMethod?: string;
+  description?: string;
+  date: Date;
+  receiptPhoto?: string;
+  vendor?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// User Budget Document Interface
+export interface IUserBudgetDocument extends Document {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  amount: number;
+  currency: string;
+  alertThreshold: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Subscription Document Interface
+export interface ISubscriptionDocument extends Document {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  provider: 'internal' | 'revenuecat';
+  revenueCatId?: string;
+  tier: 'pro';
+  status: 'active' | 'expired' | 'cancelled';
+  expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Budget Limit Document Interface
+export interface IBudgetLimitDocument extends Document {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  petId: Types.ObjectId;
+  category?: string;
+  amount: number;
+  currency: string;
+  period: 'monthly' | 'yearly';
+  alertThreshold: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Device Trial Registry Document Interface
+export interface IDeviceTrialRegistryDocument extends Document {
+  _id: Types.ObjectId;
+  deviceId: string;
+  firstTrialUserId: Types.ObjectId;
+  trialUsedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}

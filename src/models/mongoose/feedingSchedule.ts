@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose';
+import { IFeedingScheduleDocument } from './types';
 
-const feedingScheduleSchema = new Schema({
+const feedingScheduleSchema = new Schema<IFeedingScheduleDocument>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   petId: { type: Schema.Types.ObjectId, ref: 'Pet', required: true, index: true },
   time: { type: String, required: true },
@@ -16,4 +17,4 @@ const feedingScheduleSchema = new Schema({
 feedingScheduleSchema.index({ userId: 1, petId: 1 });
 feedingScheduleSchema.index({ userId: 1, isActive: 1 });
 
-export const FeedingScheduleModel = model('FeedingSchedule', feedingScheduleSchema);
+export const FeedingScheduleModel = model<IFeedingScheduleDocument>('FeedingSchedule', feedingScheduleSchema);

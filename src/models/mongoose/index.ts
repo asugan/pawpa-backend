@@ -8,3 +8,16 @@ export { BudgetLimitModel } from './budgetLimit';
 export { UserBudgetModel } from './userBudget';
 export { SubscriptionModel } from './subscription';
 export { DeviceTrialRegistryModel } from './deviceTrialRegistry';
+
+// Export document interfaces
+export type {
+  IPetDocument,
+  IHealthRecordDocument,
+  IEventDocument,
+  IFeedingScheduleDocument,
+  IExpenseDocument,
+  IUserBudgetDocument,
+  ISubscriptionDocument,
+  IBudgetLimitDocument,
+  IDeviceTrialRegistryDocument
+} from './types';

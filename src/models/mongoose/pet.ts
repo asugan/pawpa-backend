@@ -1,6 +1,7 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model, Types } from 'mongoose';
+import { IPetDocument } from './types';
 
-const petSchema = new Schema({
+const petSchema = new Schema<IPetDocument>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   name: { type: String, required: true },
   type: { type: String, required: true },
@@ -35,4 +36,4 @@ petSchema.pre('findOneAndDelete', async function() {
   await BudgetLimitModel.deleteMany({ petId });
 });
 
-export const PetModel = model('Pet', petSchema);
+export const PetModel = model<IPetDocument>('Pet', petSchema);

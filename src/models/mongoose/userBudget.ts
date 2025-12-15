@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose';
+import { IUserBudgetDocument } from './types';
 
-const userBudgetSchema = new Schema({
+const userBudgetSchema = new Schema<IUserBudgetDocument>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
   amount: { type: Number, required: true },
   currency: { type: String, default: 'TRY' },
@@ -10,4 +11,4 @@ const userBudgetSchema = new Schema({
   timestamps: true
 });
 
-export const UserBudgetModel = model('UserBudget', userBudgetSchema);
+export const UserBudgetModel = model<IUserBudgetDocument>('UserBudget', userBudgetSchema);
