@@ -1,13 +1,14 @@
-import { ExpenseModel } from '../models/mongoose/expense';
-import { PetModel } from '../models/mongoose/pet';
-import { ExpenseQueryParams } from '../types/api';
+import { FilterQuery, HydratedDocument } from 'mongoose';
+import { ExpenseModel, IExpenseDocument } from '../models/mongoose';
+import { PetModel } from '../models/mongoose';
+import { ExpenseQueryParams, CreateExpenseRequest, UpdateExpenseRequest } from '../types/api';
 
 export class ExpenseService {
   async getExpensesByPetId(
     userId: string,
     petId?: string,
     params?: ExpenseQueryParams
-  ): Promise<{ expenses: any[]; total: number }> {
+  ): Promise<{ expenses: HydratedDocument<IExpenseDocument>[]; total: number }> {
     const {
       page = 1,
       limit = 10,
@@ -22,7 +23,7 @@ export class ExpenseService {
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const whereClause: any = { userId };
+    const whereClause: FilterQuery<IExpenseDocument> = { userId };
 
     // Only filter by petId if provided
     if (petId) {
@@ -75,15 +76,15 @@ export class ExpenseService {
     };
   }
 
-  async getExpenseById(userId: string, id: string): Promise<any | null> {
+  async getExpenseById(userId: string, id: string): Promise<HydratedDocument<IExpenseDocument> | null> {
     const expense = await ExpenseModel.findOne({ _id: id, userId }).exec();
     return expense ?? null;
   }
 
   async createExpense(
     userId: string,
-    expenseData: any
-  ): Promise<any> {
+    expenseData: CreateExpenseRequest
+  ): Promise<HydratedDocument<IExpenseDocument>> {
     // Verify pet exists and belongs to user
     const pet = await PetModel.findOne({ _id: expenseData.petId, userId }).exec();
 
@@ -103,8 +104,8 @@ export class ExpenseService {
   async updateExpense(
     userId: string,
     id: string,
-    updates: Partial<any>
-  ): Promise<any | null> {
+    updates: UpdateExpenseRequest
+  ): Promise<HydratedDocument<IExpenseDocument> | null> {
     // Don't allow updating userId
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId: _userId, ...safeUpdates } = updates;
@@ -128,8 +129,8 @@ export class ExpenseService {
     petId: string | undefined,
     startDate: Date,
     endDate: Date
-  ): Promise<any[]> {
-    const whereClause: any = {
+  ): Promise<HydratedDocument<IExpenseDocument>[]> {
+    const whereClause: FilterQuery<IExpenseDocument> = {
       userId,
       date: {
         $gte: startDate,
@@ -159,7 +160,7 @@ export class ExpenseService {
     byCategory: { category: string; total: number; count: number }[];
     byCurrency: { currency: string; total: number }[];
   }> {
-    const whereClause: any = { userId };
+    const whereClause: FilterQuery<IExpenseDocument> = { userId };
 
     if (petId) {
       whereClause.petId = petId;
@@ -234,7 +235,7 @@ export class ExpenseService {
     petId?: string,
     year?: number,
     month?: number
-  ): Promise<any[]> {
+  ): Promise<HydratedDocument<IExpenseDocument>[]> {
     const now = new Date();
     const targetYear = year ?? now.getFullYear();
     const targetMonth = month ?? now.getMonth();
@@ -249,7 +250,7 @@ export class ExpenseService {
     userId: string,
     petId?: string,
     year?: number
-  ): Promise<any[]> {
+  ): Promise<HydratedDocument<IExpenseDocument>[]> {
     const now = new Date();
     const targetYear = year ?? now.getFullYear();
 
@@ -263,8 +264,8 @@ export class ExpenseService {
     userId: string,
     category: string,
     petId?: string
-  ): Promise<any[]> {
-    const whereClause: any = {
+  ): Promise<HydratedDocument<IExpenseDocument>[]> {
+    const whereClause: FilterQuery<IExpenseDocument> = {
       userId,
       category
     };
@@ -284,7 +285,7 @@ export class ExpenseService {
     startDate?: Date,
     endDate?: Date
   ): Promise<string> {
-    const whereClause: any = { userId };
+    const whereClause: FilterQuery<IExpenseDocument> = { userId };
 
     if (petId) {
       whereClause.petId = petId;
@@ -317,7 +318,7 @@ export class ExpenseService {
       'Vendor',
       'Notes',
     ];
-    const rows = expenseList.map(expense => [
+    const rows = expenseList.map((expense: HydratedDocument<IExpenseDocument>) => [
       expense.id,
       expense.petId,
       expense.category,

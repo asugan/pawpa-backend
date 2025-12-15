@@ -1,6 +1,7 @@
-import { EventModel } from '../models/mongoose/event';
-import { PetModel } from '../models/mongoose/pet';
-import { EventQueryParams } from '../types/api';
+import { FilterQuery, HydratedDocument } from 'mongoose';
+import { EventModel, IEventDocument } from '../models/mongoose';
+import { PetModel } from '../models/mongoose';
+import { EventQueryParams, CreateEventRequest, UpdateEventRequest } from '../types/api';
 import {
   getUTCTodayBoundaries,
   getUTCUpcomingBoundaries,
@@ -15,12 +16,12 @@ export class EventService {
     userId: string,
     petId?: string,
     params?: EventQueryParams
-  ): Promise<{ events: any[]; total: number }> {
+  ): Promise<{ events: HydratedDocument<IEventDocument>[]; total: number }> {
     const { page = 1, limit = 10, type, startDate, endDate } = params ?? {};
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const whereClause: any = { userId };
+    const whereClause: FilterQuery<IEventDocument> = { userId };
 
     if (petId) {
       whereClause.petId = petId;
@@ -63,7 +64,7 @@ export class EventService {
     userId: string,
     date: string,
     params: EventQueryParams
-  ): Promise<{ events: any[]; total: number }> {
+  ): Promise<{ events: HydratedDocument<IEventDocument>[]; total: number }> {
     const { page = 1, limit = 10, type } = params;
     const offset = (page - 1) * limit;
 
@@ -73,7 +74,7 @@ export class EventService {
     endDate.setUTCDate(endDate.getUTCDate() + 1);
 
     // Build where conditions using UTC boundaries
-    const whereClause: any = {
+    const whereClause: FilterQuery<IEventDocument> = {
       userId,
       startTime: {
         $gte: startDate,
@@ -104,7 +105,7 @@ export class EventService {
   /**
    * Get event by ID, ensuring it belongs to the user
    */
-  async getEventById(userId: string, id: string): Promise<any | null> {
+  async getEventById(userId: string, id: string): Promise<HydratedDocument<IEventDocument> | null> {
     const event = await EventModel.findOne({ _id: id, userId }).exec();
     return event ?? null;
   }
@@ -114,8 +115,8 @@ export class EventService {
    */
   async createEvent(
     userId: string,
-    eventData: any
-  ): Promise<any> {
+    eventData: CreateEventRequest
+  ): Promise<HydratedDocument<IEventDocument>> {
     // Verify pet exists and belongs to user
     const pet = await PetModel.findOne({ _id: eventData.petId, userId }).exec();
 
@@ -138,8 +139,8 @@ export class EventService {
   async updateEvent(
     userId: string,
     id: string,
-    updates: Partial<any>
-  ): Promise<any | null> {
+    updates: UpdateEventRequest
+  ): Promise<HydratedDocument<IEventDocument> | null> {
     // Don't allow updating userId
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId: _userId, ...safeUpdates } = updates;
@@ -172,7 +173,7 @@ export class EventService {
     userId: string,
     petId?: string,
     days = 7
-  ): Promise<any[]> {
+  ): Promise<HydratedDocument<IEventDocument>[]> {
     // Parameter validation
     if (days < 1) {
       throw new Error('Days parameter must be at least 1');
@@ -184,7 +185,7 @@ export class EventService {
     // Get UTC boundaries for the date range
     const boundaries = getUTCUpcomingBoundaries(days);
 
-    const whereClause: any = {
+    const whereClause: FilterQuery<IEventDocument> = {
       userId,
       startTime: {
         $gte: new Date(boundaries.gte),
@@ -204,10 +205,10 @@ export class EventService {
   /**
    * Get today's events for a user (UTC-based)
    */
-  async getTodayEvents(userId: string, petId?: string): Promise<any[]> {
+  async getTodayEvents(userId: string, petId?: string): Promise<HydratedDocument<IEventDocument>[]> {
     const todayBoundary = getUTCTodayBoundaries();
 
-    const whereClause: any = {
+    const whereClause: FilterQuery<IEventDocument> = {
       userId,
       startTime: {
         $gte: new Date(todayBoundary.gte),

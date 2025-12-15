@@ -1,18 +1,13 @@
-import { UserBudgetModel } from '../models/mongoose/userBudget';
+import { HydratedDocument } from 'mongoose';
+import { UserBudgetModel, IUserBudgetDocument } from '../models/mongoose';
 import { ExpenseModel } from '../models/mongoose/expense';
 import { PetModel } from '../models/mongoose/pet';
+import { SetUserBudgetInput } from '../types/api';
 
-// Input types for UserBudget operations
-export interface SetUserBudgetInput {
-  amount: number;
-  currency: string;
-  alertThreshold?: number; // optional, default 0.8
-  isActive?: boolean; // optional, default true
-}
 
 // Budget status interface with pet breakdown
 export interface BudgetStatus {
-  budget: any;
+  budget: HydratedDocument<IUserBudgetDocument>;
   currentSpending: number;
   percentage: number;
   remainingAmount: number;
@@ -26,7 +21,7 @@ export interface BudgetStatus {
 
 // Budget alert interface
 export interface BudgetAlert {
-  budget: any;
+  budget: HydratedDocument<IUserBudgetDocument>;
   currentSpending: number;
   percentage: number;
   isExceeded: boolean;
@@ -42,7 +37,7 @@ export class UserBudgetService {
   /**
    * Get budget by userId (sadece bir record dönecek)
    */
-  async getBudgetByUserId(userId: string): Promise<any | null> {
+  async getBudgetByUserId(userId: string): Promise<HydratedDocument<IUserBudgetDocument> | null> {
     const budget = await UserBudgetModel.findOne({ userId }).exec();
     return budget ?? null;
   }
@@ -53,7 +48,7 @@ export class UserBudgetService {
   async setUserBudget(
     userId: string,
     data: SetUserBudgetInput
-  ): Promise<any> {
+  ): Promise<HydratedDocument<IUserBudgetDocument>> {
     // Validate input
     if (!data.amount || data.amount <= 0) {
       throw new Error('Budget amount must be greater than 0');
@@ -230,7 +225,7 @@ export class UserBudgetService {
   /**
    * Get all active user budgets (for admin purposes)
    */
-  async getActiveUserBudgets(): Promise<any[]> {
+  async getActiveUserBudgets(): Promise<HydratedDocument<IUserBudgetDocument>[]> {
     return await UserBudgetModel.find({ isActive: true })
       .sort({ updatedAt: -1 })
       .exec();

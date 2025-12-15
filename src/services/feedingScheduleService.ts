@@ -1,6 +1,7 @@
-import { FeedingScheduleModel } from '../models/mongoose/feedingSchedule';
-import { PetModel } from '../models/mongoose/pet';
-import { FeedingScheduleQueryParams } from '../types/api';
+import { FilterQuery, HydratedDocument } from 'mongoose';
+import { FeedingScheduleModel, IFeedingScheduleDocument } from '../models/mongoose';
+import { PetModel } from '../models/mongoose';
+import { FeedingScheduleQueryParams, CreateFeedingScheduleRequest, UpdateFeedingScheduleRequest } from '../types/api';
 import { toUTCISOString } from '../lib/dateUtils';
 
 export class FeedingScheduleService {
@@ -11,12 +12,12 @@ export class FeedingScheduleService {
     userId: string,
     petId?: string,
     params?: FeedingScheduleQueryParams
-  ): Promise<{ schedules: any[]; total: number }> {
+  ): Promise<{ schedules: HydratedDocument<IFeedingScheduleDocument>[]; total: number }> {
     const { page = 1, limit = 10, isActive, foodType } = params ?? {};
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const whereClause: any = { userId };
+    const whereClause: FilterQuery<IFeedingScheduleDocument> = { userId };
 
     // Only filter by petId if provided
     if (petId) {
@@ -53,7 +54,7 @@ export class FeedingScheduleService {
   async getFeedingScheduleById(
     userId: string,
     id: string
-  ): Promise<any | null> {
+  ): Promise<HydratedDocument<IFeedingScheduleDocument> | null> {
     const schedule = await FeedingScheduleModel.findOne({ _id: id, userId }).exec();
     return schedule ?? null;
   }
@@ -63,8 +64,8 @@ export class FeedingScheduleService {
    */
   async createFeedingSchedule(
     userId: string,
-    scheduleData: any
-  ): Promise<any> {
+    scheduleData: CreateFeedingScheduleRequest
+  ): Promise<HydratedDocument<IFeedingScheduleDocument>> {
     // Verify pet exists and belongs to user
     const pet = await PetModel.findOne({ _id: scheduleData.petId, userId }).exec();
 
@@ -87,8 +88,8 @@ export class FeedingScheduleService {
   async updateFeedingSchedule(
     userId: string,
     id: string,
-    updates: Partial<any>
-  ): Promise<any | null> {
+    updates: UpdateFeedingScheduleRequest
+  ): Promise<HydratedDocument<IFeedingScheduleDocument> | null> {
     // Don't allow updating userId
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId: _userId, ...safeUpdates } = updates;
@@ -116,8 +117,8 @@ export class FeedingScheduleService {
   async getActiveSchedules(
     userId: string,
     petId?: string
-  ): Promise<any[]> {
-    const whereClause: any = {
+  ): Promise<HydratedDocument<IFeedingScheduleDocument>[]> {
+    const whereClause: FilterQuery<IFeedingScheduleDocument> = {
       userId,
       isActive: true
     };
@@ -137,7 +138,7 @@ export class FeedingScheduleService {
   async getTodaySchedules(
     userId: string,
     petId?: string
-  ): Promise<any[]> {
+  ): Promise<HydratedDocument<IFeedingScheduleDocument>[]> {
     // Use UTC date to get consistent day regardless of server timezone
     const today = new Date(toUTCISOString(new Date())).getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
     const dayNames = [
@@ -151,7 +152,7 @@ export class FeedingScheduleService {
     ];
     const todayName = dayNames[today];
 
-    const whereClause: any = {
+    const whereClause: FilterQuery<IFeedingScheduleDocument> = {
       userId,
       isActive: true,
       days: { $regex: todayName, $options: 'i' }
@@ -172,7 +173,7 @@ export class FeedingScheduleService {
   async getNextFeedingTime(
     userId: string,
     petId?: string
-  ): Promise<any | null> {
+  ): Promise<HydratedDocument<IFeedingScheduleDocument> | null> {
     // Use UTC date to get consistent day regardless of server timezone
     const today = new Date(toUTCISOString(new Date())).getUTCDay();
     const dayNames = [
@@ -186,7 +187,7 @@ export class FeedingScheduleService {
     ];
     const todayName = dayNames[today];
 
-    const whereClause: any = {
+    const whereClause: FilterQuery<IFeedingScheduleDocument> = {
       userId,
       isActive: true,
       days: { $regex: todayName, $options: 'i' }

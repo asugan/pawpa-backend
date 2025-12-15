@@ -1,4 +1,5 @@
-import { PetModel } from '../models/mongoose/pet';
+import { PetModel, IPetDocument } from '../models/mongoose';
+import { FilterQuery } from 'mongoose';
 import { NewPet, Pet, PetQueryParams } from '../types/api';
 
 export class PetService {
@@ -13,7 +14,7 @@ export class PetService {
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const whereClause: any = { userId };
+    const whereClause: FilterQuery<IPetDocument> = { userId };
 
     if (type) {
       whereClause.type = type;

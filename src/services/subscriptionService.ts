@@ -1,4 +1,5 @@
-import { SubscriptionModel } from '../models/mongoose/subscription';
+import { HydratedDocument } from 'mongoose';
+import { SubscriptionModel, ISubscriptionDocument } from '../models/mongoose';
 import { DeviceTrialRegistryModel } from '../models/mongoose/deviceTrialRegistry';
 import {
   SUBSCRIPTION_CONFIG,
@@ -115,7 +116,7 @@ export class SubscriptionService {
   /**
    * Start an internal trial for a user
    */
-  async startTrial(userId: string, deviceId: string): Promise<any> {
+  async startTrial(userId: string, deviceId: string): Promise<HydratedDocument<ISubscriptionDocument>> {
     // Check if user already has any subscription
     const existingSubscription = await SubscriptionModel.findOne({ userId }).exec();
 
@@ -170,7 +171,7 @@ export class SubscriptionService {
     revenueCatId: string,
     expiresAt: Date,
     status: string
-  ): Promise<any | null> {
+  ): Promise<HydratedDocument<ISubscriptionDocument> | null> {
     const now = new Date();
 
     // Check if user already has a subscription
@@ -215,7 +216,7 @@ export class SubscriptionService {
     revenueCatId: string,
     status: string,
     expiresAt?: Date
-  ): Promise<any | null> {
+  ): Promise<HydratedDocument<ISubscriptionDocument> | null> {
     const now = new Date();
 
     const updateData: { status: string; updatedAt: Date; expiresAt?: Date } = {
@@ -263,7 +264,7 @@ export class SubscriptionService {
   /**
    * Get subscription by user ID
    */
-  async getSubscriptionByUserId(userId: string): Promise<any | null> {
+  async getSubscriptionByUserId(userId: string): Promise<HydratedDocument<ISubscriptionDocument> | null> {
     const subscription = await SubscriptionModel.findOne({ userId }).exec();
     return subscription ?? null;
   }
