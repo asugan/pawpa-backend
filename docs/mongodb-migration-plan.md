@@ -489,24 +489,22 @@ const createExpenseSchema = z.object({
 }
 ```
 
-## Phase 6: Configuration & Tooling
+## Phase 6: ✅ Configuration & Tooling - COMPLETED
 
-### 6.1. Remove Drizzle Configuration
-Delete these files:
-- `drizzle.config.ts`
-- `src/config/database.ts` (if no longer needed)
+### 6.1. ✅ Remove Drizzle Configuration - COMPLETED
+✅ Deleted files:
+- `drizzle.config.ts` - REMOVED
+- `src/config/database.ts` - Already removed in Phase 3
 
-Remove Drizzle scripts from `package.json`:
-```json
-// Remove these scripts:
-"db:generate": "drizzle-kit generate",
-"db:migrate": "drizzle-kit migrate",
-"db:push": "drizzle-kit push",
-"db:studio": "drizzle-kit studio",
-"db:reset": "rm -f ./data/pawpa.db && npm run db:migrate"
-```
+✅ Removed Drizzle scripts from `package.json`:
+- "db:generate" - REMOVED
+- "db:migrate" - REMOVED
+- "db:push" - REMOVED
+- "db:studio" - REMOVED
+- "db:reset" - REMOVED
 
-### 6.2. Add MongoDB Scripts
+### 6.2. ✅ Add MongoDB Scripts - COMPLETED
+✅ Added MongoDB scripts to `package.json`:
 ```json
 {
   "scripts": {
@@ -518,15 +516,39 @@ Remove Drizzle scripts from `package.json`:
 }
 ```
 
-### 6.3. Environment Variables
-Update `.env`:
-```bash
-# Remove:
-DATABASE_URL=./data/pawpa.db
+✅ **Created MongoDB utility scripts**:
 
-# Add:
+1. **`scripts/check-mongodb.js`** - Check connection and list collections:
+   - Validates MongoDB connection
+   - Displays server version and database name
+   - Lists all collections in the database
+
+2. **`scripts/clean-mongodb.js`** - Clean all data from database:
+   - Interactive confirmation before deletion
+   - Drops all collections
+   - Safe operation with user confirmation
+
+3. **`scripts/seed-mongodb.js`** - Seed database with sample data:
+   - Creates test user if none exists
+   - Seeds pets, health records, events, feeding schedules
+   - Creates sample expenses, budget, and subscription data
+   - Comprehensive data for testing
+
+4. **`scripts/generate-indexes.js`** - Generate all MongoDB indexes:
+   - Creates indexes for Better-Auth collections (email, sessions, tokens)
+   - Creates compound indexes for all application collections
+   - Implements TTL indexes for session expiration
+   - Provides index statistics summary
+
+### 6.3. ✅ Environment Variables - COMPLETED
+✅ Updated `.env.example` with MongoDB variables:
+```bash
+# MongoDB
 MONGODB_URI=mongodb://localhost:27017/pawpa
 MONGODB_TEST_URI=mongodb://localhost:27017/pawpa_test
+
+# Removed:
+DATABASE_URL=./data/pawpa.db
 ```
 
 ## Phase 7: Testing Strategy
@@ -711,6 +733,7 @@ Test each service with real MongoDB operations.
 - Phase 3: Database Configuration (100%)
 - Phase 4: Service Layer Refactoring (100%) - All 7 services migrated!
 - Phase 5: Route and Controller Updates (100%) - ObjectId validation and error handling
+- Phase 6: Configuration & Tooling (100%) - Cleanup completed
 - All application schemas created with proper relationships and indexes
 - MongoDB connection established in application entry point
 - Better-Auth configured with built-in MongoDB adapter
@@ -718,14 +741,16 @@ Test each service with real MongoDB operations.
 - All service methods converted from Drizzle to Mongoose patterns
 - ObjectId validation added to all routes with ID parameters
 - Comprehensive MongoDB error handling implemented
+- Drizzle configuration files removed
+- MongoDB utility scripts created (check, clean, seed, generate-indexes)
+- Environment variables updated for MongoDB
 
 ### ⏳ Next Steps:
-- Phase 6: Configuration & Tooling (cleanup)
 - Phase 7: Testing Strategy
 - Phase 8: Deployment & Migration
 - Phase 9: Post-Deployment Cleanup
 
-### 📊 Current Status: **90% Complete**
+### 📊 Current Status: **95% Complete**
 
 ## Key Benefits of Using Built-in Adapter
 
