@@ -1,9 +1,7 @@
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
-import {
-  SetUserBudgetInput,
-  UserBudgetService,
-} from '../services/userBudgetService';
+import { UserBudgetService } from '../services/userBudgetService';
+import { SetUserBudgetInput } from '../types/api';
 import { successResponse } from '../utils/response';
 import { createError } from '../middleware/errorHandler';
 

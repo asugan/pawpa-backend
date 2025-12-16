@@ -1,4 +1,4 @@
-import { Schema, model, Types } from 'mongoose';
+import { Query, Schema, model } from 'mongoose';
 import { IPetDocument } from './types';
 
 const petSchema = new Schema<IPetDocument>({
@@ -18,8 +18,12 @@ const petSchema = new Schema<IPetDocument>({
 petSchema.index({ userId: 1, name: 1 });
 
 // Cascade delete middleware
-petSchema.pre('findOneAndDelete', async function() {
-  const petId = this.getQuery()._id;
+petSchema.pre('findOneAndDelete', async function(this: Query<IPetDocument, IPetDocument>) {
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+  const query = this.getQuery();
+  const petId = query._id;
+
+  if (!petId) return;
 
   // Get referenced models (dynamic import to avoid circular dependencies)
   const { ExpenseModel } = await import('./expense');
@@ -34,6 +38,7 @@ petSchema.pre('findOneAndDelete', async function() {
   await EventModel.deleteMany({ petId });
   await FeedingScheduleModel.deleteMany({ petId });
   await BudgetLimitModel.deleteMany({ petId });
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment */
 });
 
 export const PetModel = model<IPetDocument>('Pet', petSchema);

@@ -94,7 +94,7 @@ export class SubscriptionController {
         {
           success: true,
           subscription: {
-            id: subscription.id,
+            id: subscription._id,
             provider: subscription.provider,
             tier: subscription.tier,
             status: subscription.status,

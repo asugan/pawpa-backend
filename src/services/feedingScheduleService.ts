@@ -1,7 +1,6 @@
-import { FilterQuery, HydratedDocument } from 'mongoose';
-import { FeedingScheduleModel, IFeedingScheduleDocument } from '../models/mongoose';
-import { PetModel } from '../models/mongoose';
-import { FeedingScheduleQueryParams, CreateFeedingScheduleRequest, UpdateFeedingScheduleRequest } from '../types/api';
+import { HydratedDocument, QueryFilter, Types } from 'mongoose';
+import { FeedingScheduleModel, IFeedingScheduleDocument, PetModel } from '../models/mongoose';
+import { CreateFeedingScheduleRequest, FeedingScheduleQueryParams, UpdateFeedingScheduleRequest } from '../types/api';
 import { toUTCISOString } from '../lib/dateUtils';
 
 export class FeedingScheduleService {
@@ -17,11 +16,11 @@ export class FeedingScheduleService {
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const whereClause: FilterQuery<IFeedingScheduleDocument> = { userId };
+    const whereClause: QueryFilter<IFeedingScheduleDocument> = { userId: new Types.ObjectId(userId) };
 
     // Only filter by petId if provided
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     if (isActive !== undefined) {
@@ -91,8 +90,7 @@ export class FeedingScheduleService {
     updates: UpdateFeedingScheduleRequest
   ): Promise<HydratedDocument<IFeedingScheduleDocument> | null> {
     // Don't allow updating userId
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { userId: _userId, ...safeUpdates } = updates;
+    const { ...safeUpdates } = updates;
 
     const updatedSchedule = await FeedingScheduleModel.findOneAndUpdate(
       { _id: id, userId },
@@ -118,13 +116,13 @@ export class FeedingScheduleService {
     userId: string,
     petId?: string
   ): Promise<HydratedDocument<IFeedingScheduleDocument>[]> {
-    const whereClause: FilterQuery<IFeedingScheduleDocument> = {
-      userId,
+    const whereClause: QueryFilter<IFeedingScheduleDocument> = {
+      userId: new Types.ObjectId(userId),
       isActive: true
     };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     return await FeedingScheduleModel.find(whereClause)
@@ -152,14 +150,14 @@ export class FeedingScheduleService {
     ];
     const todayName = dayNames[today];
 
-    const whereClause: FilterQuery<IFeedingScheduleDocument> = {
-      userId,
+    const whereClause: QueryFilter<IFeedingScheduleDocument> = {
+      userId: new Types.ObjectId(userId),
       isActive: true,
       days: { $regex: todayName, $options: 'i' }
     };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     return await FeedingScheduleModel.find(whereClause)
@@ -187,14 +185,14 @@ export class FeedingScheduleService {
     ];
     const todayName = dayNames[today];
 
-    const whereClause: FilterQuery<IFeedingScheduleDocument> = {
-      userId,
+    const whereClause: QueryFilter<IFeedingScheduleDocument> = {
+      userId: new Types.ObjectId(userId),
       isActive: true,
       days: { $regex: todayName, $options: 'i' }
     };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     const schedule = await FeedingScheduleModel.findOne(whereClause)

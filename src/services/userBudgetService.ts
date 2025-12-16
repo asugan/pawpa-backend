@@ -1,7 +1,5 @@
-import { HydratedDocument } from 'mongoose';
-import { UserBudgetModel, IUserBudgetDocument } from '../models/mongoose';
-import { ExpenseModel } from '../models/mongoose/expense';
-import { PetModel } from '../models/mongoose/pet';
+import { HydratedDocument, Types } from 'mongoose';
+import { ExpenseModel, IUserBudgetDocument, UserBudgetModel } from '../models/mongoose';
 import { SetUserBudgetInput } from '../types/api';
 
 
@@ -31,6 +29,14 @@ export interface BudgetAlert {
     petName: string;
     spending: number;
   }[];
+}
+
+interface MonthlyExpenseAggregate {
+  petId: string;
+  amount: number;
+  description: string;
+  date: Date;
+  petName: string;
 }
 
 export class UserBudgetService {
@@ -132,10 +138,10 @@ export class UserBudgetService {
     );
 
     // Get all expenses for the user in current month with matching currency
-    const monthlyExpenses = await ExpenseModel.aggregate([
+    const monthlyExpenses = await ExpenseModel.aggregate<MonthlyExpenseAggregate>([
       {
         $match: {
-          userId: userId,
+          userId: new Types.ObjectId(userId),
           currency: budget.currency,
           date: {
             $gte: startDate,
@@ -165,31 +171,31 @@ export class UserBudgetService {
 
     // Calculate total spending
     const currentSpending = monthlyExpenses.reduce(
-      (sum: number, expense: any) => sum + expense.amount,
+      (sum: number, expense: MonthlyExpenseAggregate) => sum + expense.amount,
       0
     );
 
     const percentage =
       budget.amount > 0 ? (currentSpending / budget.amount) * 100 : 0;
     const remainingAmount = budget.amount - currentSpending;
-    const isAlert = percentage >= budget.alertThreshold! * 100;
+    const isAlert = percentage >= budget.alertThreshold * 100;
 
     // Calculate pet breakdown
     const petBreakdown = monthlyExpenses.reduce(
-      (acc: any[], expense: any) => {
-        const existing = acc.find(item => item.petId === expense.petId);
+      (acc: { petId: string; petName: string; spending: number }[], expense: MonthlyExpenseAggregate) => {
+        const existing = acc.find(item => item.petId === expense.petId.toString()); // petId coming from project might be ObjectId or string depending on driver, assuming string here or casting
         if (existing) {
           existing.spending += expense.amount;
         } else {
           acc.push({
-            petId: expense.petId,
+            petId: expense.petId.toString(),
             petName: expense.petName || 'Unknown Pet',
             spending: expense.amount,
           });
         }
         return acc;
       },
-      [] as { petId: string; petName: string; spending: number }[]
+      []
     );
 
     return {

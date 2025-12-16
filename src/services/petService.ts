@@ -1,6 +1,6 @@
-import { PetModel, IPetDocument } from '../models/mongoose';
-import { FilterQuery } from 'mongoose';
-import { NewPet, Pet, PetQueryParams } from '../types/api';
+import { QueryFilter, Types, UpdateQuery } from 'mongoose';
+import { IPetDocument, PetModel } from '../models/mongoose';
+import { Pet, PetQueryParams } from '../types/api';
 
 export class PetService {
   /**
@@ -14,7 +14,7 @@ export class PetService {
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const whereClause: FilterQuery<IPetDocument> = { userId };
+    const whereClause: QueryFilter<IPetDocument> = { userId: new Types.ObjectId(userId) };
 
     if (type) {
       whereClause.type = type;
@@ -57,7 +57,7 @@ export class PetService {
    */
   async createPet(
     userId: string,
-    petData: Omit<NewPet, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+    petData: Partial<IPetDocument>
   ): Promise<Pet> {
     const newPet = new PetModel({ ...petData, userId });
     const createdPet = await newPet.save();
@@ -74,11 +74,10 @@ export class PetService {
   async updatePet(
     userId: string,
     id: string,
-    updates: Partial<NewPet>
+    updates: UpdateQuery<IPetDocument>
   ): Promise<Pet | null> {
     // Don't allow updating userId
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { userId: _userId, ...safeUpdates } = updates;
+    const { ...safeUpdates } = updates;
 
     const updatedPet = await PetModel.findOneAndUpdate(
       { _id: id, userId },

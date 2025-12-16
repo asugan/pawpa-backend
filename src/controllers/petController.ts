@@ -10,7 +10,7 @@ import {
 } from '../types/api';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
-import { NewPet } from '../models/schema';
+import { IPetDocument } from '../models/mongoose';
 
 export class PetController {
   private petService: PetService;
@@ -94,9 +94,9 @@ export class PetController {
       }
 
       // Convert string dates to UTC Date objects
-      const convertedPetData = {
+      const convertedPetData: Partial<IPetDocument> = {
         ...petData,
-        birthDate: petData.birthDate ? parseUTCDate(petData.birthDate) : null,
+        birthDate: petData.birthDate ? parseUTCDate(petData.birthDate) : undefined,
       };
 
       const pet = await this.petService.createPet(
@@ -125,12 +125,12 @@ export class PetController {
       }
 
       // Convert string dates to UTC Date objects
-      const convertedUpdates: Partial<NewPet> = {
+      const convertedUpdates: Partial<IPetDocument> = {
         ...updates,
         birthDate: updates.birthDate !== undefined
           ? (updates.birthDate ? parseUTCDate(updates.birthDate) : null)
           : undefined,
-      };
+      } as Partial<IPetDocument>;
 
       const pet = await this.petService.updatePet(
         userId,

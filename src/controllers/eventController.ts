@@ -9,7 +9,7 @@ import {
 } from '../types/api';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
-import { NewEvent } from '../models/schema';
+import { IEventDocument } from '../models/mongoose';
 
 export class EventController {
   private eventService: EventService;
@@ -146,12 +146,12 @@ export class EventController {
       const convertedEventData = {
         ...eventData,
         startTime: parseUTCDate(eventData.startTime),
-        endTime: eventData.endTime ? parseUTCDate(eventData.endTime) : null,
+        endTime: eventData.endTime ? parseUTCDate(eventData.endTime) : undefined,
       };
 
       const event = await this.eventService.createEvent(
         userId,
-        convertedEventData
+        convertedEventData as unknown as Partial<IEventDocument>
       );
       successResponse(res, event, 201);
     } catch (error) {
@@ -175,13 +175,13 @@ export class EventController {
       }
 
       // Convert string dates to UTC Date objects
-      const convertedUpdates: Partial<NewEvent> = {
+      const convertedUpdates: Partial<IEventDocument> = {
         ...updates,
         startTime: updates.startTime ? parseUTCDate(updates.startTime) : undefined,
         endTime: updates.endTime !== undefined
           ? (updates.endTime ? parseUTCDate(updates.endTime) : null)
           : undefined,
-      };
+      } as Partial<IEventDocument>; // Cast needed for null vs undefined/optional
 
       const event = await this.eventService.updateEvent(
         userId,

@@ -1,10 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import { NextFunction, Request, Response } from 'express';
-import mongoose from 'mongoose';
+import { Error as MongooseError } from 'mongoose';
 
 export interface ApiError extends Error {
   statusCode: number;
   code: string | undefined;
   details: unknown;
+  keyValue?: Record<string, unknown>;
+  kind?: string;
+  value?: unknown;
+  errors?: Record<string, { path: string; message: string; value: unknown }>;
 }
 
 export const errorHandler = (
@@ -19,11 +24,11 @@ export const errorHandler = (
   let details: unknown = err.details;
 
   // Mongoose validation errors
-  if (err.name === 'ValidationError') {
+  if (err instanceof MongooseError.ValidationError) {
     statusCode = 400;
     code = 'VALIDATION_ERROR';
     message = 'Validation failed';
-    details = Object.values((err as any).errors).map((e: any) => ({
+    details = Object.values(err.errors).map((e) => ({
       field: e.path,
       message: e.message,
       value: e.value,
@@ -35,21 +40,23 @@ export const errorHandler = (
     statusCode = 409;
     code = 'DUPLICATE_KEY_ERROR';
     message = 'Duplicate key error';
-    const field = Object.keys((err as any).keyValue)[0];
+    const keyValue = (err as any).keyValue as Record<string, unknown> | undefined;
+    const keys = keyValue ? Object.keys(keyValue) : [];
+    const field = (keys.length > 0 ? keys[0] : 'unknown');
     details = {
       field,
-      value: (err as any).keyValue[field],
+      value: (keyValue && field) ? keyValue[field] : undefined,
       message: `${field} already exists`,
     };
   }
 
   // Invalid ObjectId
-  else if (err.kind === 'ObjectId' || err.name === 'CastError') {
+  else if (err instanceof MongooseError.CastError) {
     statusCode = 400;
     code = 'INVALID_ID_FORMAT';
     message = 'Invalid ID format';
     details = {
-      value: (err as any).value,
+      value: err.value,
       message: 'ID must be a valid 24-character hex string',
     };
   }

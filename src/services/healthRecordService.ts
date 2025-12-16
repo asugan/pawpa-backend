@@ -1,7 +1,6 @@
-import { FilterQuery, HydratedDocument } from 'mongoose';
-import { HealthRecordModel, IHealthRecordDocument } from '../models/mongoose';
-import { PetModel } from '../models/mongoose';
-import { HealthRecordQueryParams, CreateHealthRecordRequest, UpdateHealthRecordRequest } from '../types/api';
+import { HydratedDocument, QueryFilter, Types, UpdateQuery } from 'mongoose';
+import { HealthRecordModel, IHealthRecordDocument, PetModel } from '../models/mongoose';
+import { HealthRecordQueryParams } from '../types/api';
 import { parseUTCDate } from '../lib/dateUtils';
 
 export class HealthRecordService {
@@ -17,10 +16,10 @@ export class HealthRecordService {
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const whereClause: FilterQuery<IHealthRecordDocument> = { userId };
+    const whereClause: QueryFilter<IHealthRecordDocument> = { userId: new Types.ObjectId(userId) };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     if (type) {
@@ -69,7 +68,7 @@ export class HealthRecordService {
    */
   async createHealthRecord(
     userId: string,
-    recordData: CreateHealthRecordRequest
+    recordData: Partial<IHealthRecordDocument>
   ): Promise<HydratedDocument<IHealthRecordDocument>> {
     // Verify pet exists and belongs to user
     const pet = await PetModel.findOne({ _id: recordData.petId, userId }).exec();
@@ -93,11 +92,10 @@ export class HealthRecordService {
   async updateHealthRecord(
     userId: string,
     id: string,
-    updates: UpdateHealthRecordRequest
+    updates: UpdateQuery<IHealthRecordDocument>
   ): Promise<HydratedDocument<IHealthRecordDocument> | null> {
     // Don't allow updating userId
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { userId: _userId, ...safeUpdates } = updates;
+    const { ...safeUpdates } = updates;
 
     const updatedRecord = await HealthRecordModel.findOneAndUpdate(
       { _id: id, userId },
@@ -124,14 +122,14 @@ export class HealthRecordService {
     petId?: string
   ): Promise<HydratedDocument<IHealthRecordDocument>[]> {
     const now = new Date();
-    const whereClause: FilterQuery<IHealthRecordDocument> = {
-      userId,
+    const whereClause: QueryFilter<IHealthRecordDocument> = {
+      userId: new Types.ObjectId(userId),
       type: 'vaccination',
       nextDueDate: { $gte: now }
     };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     return await HealthRecordModel.find(whereClause)

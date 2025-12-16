@@ -9,7 +9,7 @@ import {
 } from '../types/api';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
-import { NewHealthRecord } from '../models/schema';
+import { IHealthRecordDocument } from '../models/mongoose';
 
 export class HealthRecordController {
   private healthRecordService: HealthRecordService;
@@ -152,12 +152,12 @@ export class HealthRecordController {
       const convertedRecordData = {
         ...recordData,
         date: parseUTCDate(recordData.date),
-        nextDueDate: recordData.nextDueDate ? parseUTCDate(recordData.nextDueDate) : null,
+        nextDueDate: recordData.nextDueDate ? parseUTCDate(recordData.nextDueDate) : undefined,
       };
 
       const record = await this.healthRecordService.createHealthRecord(
         userId,
-        convertedRecordData
+        convertedRecordData as unknown as Partial<IHealthRecordDocument>
       );
       successResponse(res, record, 201);
     } catch (error) {
@@ -181,7 +181,7 @@ export class HealthRecordController {
       }
 
       // Convert string dates to UTC Date objects
-      const convertedUpdates: Partial<NewHealthRecord> = {
+      const convertedUpdates = {
         ...updates,
         date: updates.date ? parseUTCDate(updates.date) : undefined,
         nextDueDate: updates.nextDueDate !== undefined
@@ -192,7 +192,7 @@ export class HealthRecordController {
       const record = await this.healthRecordService.updateHealthRecord(
         userId,
         id,
-        convertedUpdates
+        convertedUpdates as unknown as Partial<IHealthRecordDocument>
       );
 
       if (!record) {

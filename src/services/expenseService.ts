@@ -1,7 +1,7 @@
-import { FilterQuery, HydratedDocument } from 'mongoose';
-import { ExpenseModel, IExpenseDocument } from '../models/mongoose';
-import { PetModel } from '../models/mongoose';
-import { ExpenseQueryParams, CreateExpenseRequest, UpdateExpenseRequest } from '../types/api';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+import { HydratedDocument, QueryFilter, Types, UpdateQuery } from 'mongoose';
+import { ExpenseModel, IExpenseDocument, PetModel } from '../models/mongoose';
+import { ExpenseQueryParams } from '../types/api';
 
 export class ExpenseService {
   async getExpensesByPetId(
@@ -23,11 +23,11 @@ export class ExpenseService {
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const whereClause: FilterQuery<IExpenseDocument> = { userId };
+    const whereClause: QueryFilter<IExpenseDocument> = { userId: new Types.ObjectId(userId) };
 
     // Only filter by petId if provided
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     if (category) {
@@ -52,12 +52,15 @@ export class ExpenseService {
       }
     }
 
-    if (minAmount !== undefined) {
-      whereClause.amount = { ...whereClause.amount, $gte: minAmount };
-    }
-
-    if (maxAmount !== undefined) {
-      whereClause.amount = { ...whereClause.amount, $lte: maxAmount };
+    if (minAmount !== undefined || maxAmount !== undefined) {
+      const amountQuery: Record<string, number> = {};
+      if (minAmount !== undefined) {
+        amountQuery.$gte = minAmount;
+      }
+      if (maxAmount !== undefined) {
+        amountQuery.$lte = maxAmount;
+      }
+      whereClause.amount = amountQuery;
     }
 
     // Get total count
@@ -83,7 +86,7 @@ export class ExpenseService {
 
   async createExpense(
     userId: string,
-    expenseData: CreateExpenseRequest
+    expenseData: Partial<IExpenseDocument>
   ): Promise<HydratedDocument<IExpenseDocument>> {
     // Verify pet exists and belongs to user
     const pet = await PetModel.findOne({ _id: expenseData.petId, userId }).exec();
@@ -104,11 +107,10 @@ export class ExpenseService {
   async updateExpense(
     userId: string,
     id: string,
-    updates: UpdateExpenseRequest
+    updates: UpdateQuery<IExpenseDocument>
   ): Promise<HydratedDocument<IExpenseDocument> | null> {
     // Don't allow updating userId
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { userId: _userId, ...safeUpdates } = updates;
+    const { ...safeUpdates } = updates;
 
     const updatedExpense = await ExpenseModel.findOneAndUpdate(
       { _id: id, userId },
@@ -130,8 +132,8 @@ export class ExpenseService {
     startDate: Date,
     endDate: Date
   ): Promise<HydratedDocument<IExpenseDocument>[]> {
-    const whereClause: FilterQuery<IExpenseDocument> = {
-      userId,
+    const whereClause: QueryFilter<IExpenseDocument> = {
+      userId: new Types.ObjectId(userId),
       date: {
         $gte: startDate,
         $lte: endDate
@@ -139,7 +141,7 @@ export class ExpenseService {
     };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     return await ExpenseModel.find(whereClause)
@@ -160,10 +162,10 @@ export class ExpenseService {
     byCategory: { category: string; total: number; count: number }[];
     byCurrency: { currency: string; total: number }[];
   }> {
-    const whereClause: FilterQuery<IExpenseDocument> = { userId };
+    const whereClause: QueryFilter<IExpenseDocument> = { userId: new Types.ObjectId(userId) };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     if (startDate || endDate) {
@@ -181,8 +183,8 @@ export class ExpenseService {
     }
 
     // Get total and count
-    const [totalResult] = await ExpenseModel.aggregate([
-      { $match: whereClause },
+    const totalResultList = await ExpenseModel.aggregate([
+      { $match: whereClause as any },
       {
         $group: {
           _id: null,
@@ -190,15 +192,16 @@ export class ExpenseService {
           count: { $sum: 1 },
         },
       },
-    ]);
+    ]) as unknown as { total: number; count: number }[];
 
+    const totalResult = totalResultList[0];
     const total = totalResult?.total ?? 0;
     const expenseCount = totalResult?.count ?? 0;
     const average = expenseCount > 0 ? total / expenseCount : 0;
 
     // Get stats by category
     const byCategory = await ExpenseModel.aggregate([
-      { $match: whereClause },
+      { $match: whereClause as any },
       {
         $group: {
           _id: '$category',
@@ -207,11 +210,11 @@ export class ExpenseService {
         },
       },
       { $project: { _id: 0, category: '$_id', total: 1, count: 1 } },
-    ]);
+    ]) as unknown as { category: string; total: number; count: number }[];
 
     // Get stats by currency
     const byCurrency = await ExpenseModel.aggregate([
-      { $match: whereClause },
+      { $match: whereClause as any },
       {
         $group: {
           _id: '$currency',
@@ -219,7 +222,7 @@ export class ExpenseService {
         },
       },
       { $project: { _id: 0, currency: '$_id', total: 1 } },
-    ]);
+    ]) as unknown as { currency: string; total: number }[];
 
     return {
       total,
@@ -265,13 +268,13 @@ export class ExpenseService {
     category: string,
     petId?: string
   ): Promise<HydratedDocument<IExpenseDocument>[]> {
-    const whereClause: FilterQuery<IExpenseDocument> = {
-      userId,
+    const whereClause: QueryFilter<IExpenseDocument> = {
+      userId: new Types.ObjectId(userId),
       category
     };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     return await ExpenseModel.find(whereClause)
@@ -285,10 +288,10 @@ export class ExpenseService {
     startDate?: Date,
     endDate?: Date
   ): Promise<string> {
-    const whereClause: FilterQuery<IExpenseDocument> = { userId };
+    const whereClause: QueryFilter<IExpenseDocument> = { userId: new Types.ObjectId(userId) };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     if (startDate || endDate) {
@@ -319,8 +322,8 @@ export class ExpenseService {
       'Notes',
     ];
     const rows = expenseList.map((expense: HydratedDocument<IExpenseDocument>) => [
-      expense.id,
-      expense.petId,
+      expense._id.toString(),
+      expense.petId.toString(),
       expense.category,
       expense.amount.toString(),
       expense.currency,

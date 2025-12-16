@@ -1,9 +1,8 @@
-import dotenv from 'dotenv';
+// Load environment variables FIRST before any other imports
+// Using import syntax for ES modules with dotenv/config
+import 'dotenv/config';
 import mongoose from 'mongoose';
 import app from './app';
-
-// Load environment variables
-dotenv.config();
 
 const PORT = process.env.PORT ?? 3000;
 
@@ -20,7 +19,7 @@ const startServer = async () => {
     console.log('Connected to MongoDB');
 
     // Handle connection events
-    mongoose.connection.on('error', (err) => {
+    mongoose.connection.on('error', err => {
       console.error('MongoDB connection error:', err);
     });
 
@@ -64,4 +63,4 @@ const startServer = async () => {
   }
 };
 
-startServer();
+void startServer();

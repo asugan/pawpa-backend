@@ -17,30 +17,32 @@ export const paramsWithUserId = z.object({
 });
 
 // Validation middleware factory for ObjectId params
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
-export function validateObjectId(param: string = 'id') {
+export function validateObjectId(param = 'id') {
   return (req: Request, res: Response, next: NextFunction) => {
     const id = req.params[param];
 
     if (!id) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: {
           message: `${param} parameter is required`,
           code: 'MISSING_PARAM'
         }
       });
+      return;
     }
 
     if (!/^[0-9a-fA-F]{24}$/.test(id)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: {
           message: `Invalid ${param} format`,
           code: 'INVALID_ID_FORMAT'
         }
       });
+      return;
     }
 
     next();

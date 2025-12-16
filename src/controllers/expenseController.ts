@@ -12,7 +12,7 @@ import {
 } from '../types/api';
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
-import { NewExpense } from '../models/schema';
+import { IExpenseDocument } from '../models/mongoose';
 
 export class ExpenseController {
   private expenseService: ExpenseService;
@@ -118,10 +118,15 @@ export class ExpenseController {
       }
 
       // Convert date string to UTC Date object
-      const expense = await this.expenseService.createExpense(userId, {
+      const convertedExpenseData = {
         ...expenseData,
         date: parseUTCDate(expenseData.date),
-      });
+      };
+
+      const expense = await this.expenseService.createExpense(
+        userId,
+        convertedExpenseData as unknown as Partial<IExpenseDocument>
+      );
 
       successResponse(res, expense, 201);
     } catch (error) {
@@ -145,10 +150,10 @@ export class ExpenseController {
       }
 
       // Convert date string to UTC Date object if provided
-      const updateData: Partial<NewExpense> = {
+      const updateData: Partial<IExpenseDocument> = {
         ...updates,
         date: updates.date ? parseUTCDate(updates.date) : undefined,
-      };
+      } as Partial<IExpenseDocument>;
 
       const expense = await this.expenseService.updateExpense(
         userId,

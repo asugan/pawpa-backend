@@ -1,7 +1,6 @@
-import { FilterQuery, HydratedDocument } from 'mongoose';
-import { EventModel, IEventDocument } from '../models/mongoose';
-import { PetModel } from '../models/mongoose';
-import { EventQueryParams, CreateEventRequest, UpdateEventRequest } from '../types/api';
+import { HydratedDocument, QueryFilter, Types, UpdateQuery } from 'mongoose';
+import { EventModel, IEventDocument, PetModel } from '../models/mongoose';
+import { EventQueryParams } from '../types/api';
 import {
   getUTCTodayBoundaries,
   getUTCUpcomingBoundaries,
@@ -21,10 +20,10 @@ export class EventService {
     const offset = (page - 1) * limit;
 
     // Build where conditions - always filter by userId
-    const whereClause: FilterQuery<IEventDocument> = { userId };
+    const whereClause: QueryFilter<IEventDocument> = { userId: new Types.ObjectId(userId) };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     if (type) {
@@ -74,8 +73,8 @@ export class EventService {
     endDate.setUTCDate(endDate.getUTCDate() + 1);
 
     // Build where conditions using UTC boundaries
-    const whereClause: FilterQuery<IEventDocument> = {
-      userId,
+    const whereClause: QueryFilter<IEventDocument> = {
+      userId: new Types.ObjectId(userId),
       startTime: {
         $gte: startDate,
         $lt: endDate
@@ -115,7 +114,7 @@ export class EventService {
    */
   async createEvent(
     userId: string,
-    eventData: CreateEventRequest
+    eventData: Partial<IEventDocument>
   ): Promise<HydratedDocument<IEventDocument>> {
     // Verify pet exists and belongs to user
     const pet = await PetModel.findOne({ _id: eventData.petId, userId }).exec();
@@ -139,11 +138,10 @@ export class EventService {
   async updateEvent(
     userId: string,
     id: string,
-    updates: UpdateEventRequest
+    updates: UpdateQuery<IEventDocument>
   ): Promise<HydratedDocument<IEventDocument> | null> {
     // Don't allow updating userId
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { userId: _userId, ...safeUpdates } = updates;
+    const { ...safeUpdates } = updates;
 
     const updatedEvent = await EventModel.findOneAndUpdate(
       { _id: id, userId },
@@ -185,8 +183,8 @@ export class EventService {
     // Get UTC boundaries for the date range
     const boundaries = getUTCUpcomingBoundaries(days);
 
-    const whereClause: FilterQuery<IEventDocument> = {
-      userId,
+    const whereClause: QueryFilter<IEventDocument> = {
+      userId: new Types.ObjectId(userId),
       startTime: {
         $gte: new Date(boundaries.gte),
         $lte: new Date(boundaries.lte)
@@ -194,7 +192,7 @@ export class EventService {
     };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     return await EventModel.find(whereClause)
@@ -208,8 +206,8 @@ export class EventService {
   async getTodayEvents(userId: string, petId?: string): Promise<HydratedDocument<IEventDocument>[]> {
     const todayBoundary = getUTCTodayBoundaries();
 
-    const whereClause: FilterQuery<IEventDocument> = {
-      userId,
+    const whereClause: QueryFilter<IEventDocument> = {
+      userId: new Types.ObjectId(userId),
       startTime: {
         $gte: new Date(todayBoundary.gte),
         $lte: new Date(todayBoundary.lte)
@@ -217,7 +215,7 @@ export class EventService {
     };
 
     if (petId) {
-      whereClause.petId = petId;
+      whereClause.petId = new Types.ObjectId(petId);
     }
 
     return await EventModel.find(whereClause)

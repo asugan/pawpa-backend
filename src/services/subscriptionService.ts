@@ -1,5 +1,5 @@
 import { HydratedDocument } from 'mongoose';
-import { SubscriptionModel, ISubscriptionDocument } from '../models/mongoose';
+import { ISubscriptionDocument, SubscriptionModel } from '../models/mongoose';
 import { DeviceTrialRegistryModel } from '../models/mongoose/deviceTrialRegistry';
 import {
   SUBSCRIPTION_CONFIG,
@@ -82,7 +82,7 @@ export class SubscriptionService {
       isExpired: false,
       isCancelled: false,
       canStartTrial: false, // Already has subscription
-      provider: subscription.provider as 'internal' | 'revenuecat',
+      provider: subscription.provider,
     };
   }
 
@@ -104,7 +104,7 @@ export class SubscriptionService {
       return {
         canStartTrial: false,
         reason: 'Device has already used a trial',
-        existingTrialUserId: existingDevice.firstTrialUserId,
+        existingTrialUserId: existingDevice.firstTrialUserId.toString(),
       };
     }
 
