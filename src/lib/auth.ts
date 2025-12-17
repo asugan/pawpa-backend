@@ -20,7 +20,7 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
   database: mongodbAdapter(db, {
     client,
     usePlural: false,
-    transaction: false // Disable transactions for standalone MongoDB
+    transaction: false, // Disable transactions for standalone MongoDB
   }),
   secret: authSecret,
   baseURL: process.env.BETTER_AUTH_URL,
@@ -37,7 +37,7 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  /*
+
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
@@ -48,10 +48,7 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
       clientSecret: process.env.APPLE_CLIENT_SECRET ?? '',
     },
   },
-  */
-  socialProviders: {
-    // Add providers when ready
-  },
+
   // Add Expo plugin for mobile support
   plugins: [
     expo(),

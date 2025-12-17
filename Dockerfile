@@ -1,42 +1,34 @@
-# Multi-stage Dockerfile for PawPa Backend
+# Multi-stage Dockerfile for Petopia Backend
 # Optimized for Coolify deployment with Node.js 20 Alpine
 
-# Stage 1: Build stage
+# ==========================================
+# Stage 1: Builder
+# ==========================================
 FROM node:20-alpine AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Install build dependencies for native modules (better-sqlite3)
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    sqlite-dev
-
-# Copy package files
+# Copy package files first to leverage Docker cache
 COPY package.json package-lock.json ./
 
-# Install all dependencies (including devDependencies for build)
-RUN npm ci --only=production=false
+# Install ALL dependencies (including devDependencies for build tools like tsup)
+RUN npm ci
 
-# Copy source code
+# Copy the rest of the source code
 COPY . .
 
-# Build the application
+# Build the application (uses tsup)
 RUN npm run build
 
-# Stage 2: Runtime stage
+# ==========================================
+# Stage 2: Runtime
+# ==========================================
 FROM node:20-alpine AS runtime
 
-# Set working directory
 WORKDIR /app
 
-# Install runtime dependencies for native modules
-RUN apk add --no-cache \
-    sqlite \
-    curl \
-    && rm -rf /var/cache/apk/*
+# Install basic runtime tools if needed (curl for healthcheck)
+RUN apk add --no-cache curl
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
@@ -45,28 +37,23 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copy package files
 COPY package.json package-lock.json ./
 
-# Install only production dependencies
+# Install ONLY production dependencies
 RUN npm ci --only=production && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-
-# Copy migrations directory
-COPY --chown=nodejs:nodejs ./migrations ./migrations
-
-# Create data directory for SQLite database
-RUN mkdir -p /app/data && chown nodejs:nodejs /app/data
+# Copy migrations or scripts if strictly necessary for runtime (optional)
+COPY --from=builder --chown=nodejs:nodejs /app/scripts ./scripts
 
 # Switch to non-root user
 USER nodejs
 
-# Expose port 3000
+# Expose the application port
 EXPOSE 3000
 
-# Set environment variables
+# Environment variables with default values
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV DATABASE_URL=/app/data/pawpa.db
 
 # Health check configuration
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
