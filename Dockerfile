@@ -12,7 +12,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install ALL dependencies (including devDependencies for build tools like tsup)
-RUN npm ci
+RUN npm ci --include=dev
 
 # Copy the rest of the source code
 COPY . .
