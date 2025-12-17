@@ -35,7 +35,3 @@ services:
           memory: '1G'
     networks:
       - coolify
-  networks:
-  coolify:
-    external: true
-    name: coolify
