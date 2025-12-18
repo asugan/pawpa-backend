@@ -2,6 +2,7 @@
 import { HydratedDocument, QueryFilter, Types, UpdateQuery } from 'mongoose';
 import { ExpenseModel, IExpenseDocument, PetModel } from '../models/mongoose';
 import { ExpenseQueryParams } from '../types/api';
+import PDFDocument from 'pdfkit';
 
 export class ExpenseService {
   async getExpensesByPetId(
@@ -340,5 +341,107 @@ export class ExpenseService {
     ].join('\n');
 
     return csvContent;
+  }
+
+  async exportExpensesPDF(
+    userId: string,
+    petId?: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<Buffer> {
+    const whereClause: QueryFilter<IExpenseDocument> = { userId: new Types.ObjectId(userId) };
+
+    if (petId) {
+      whereClause.petId = new Types.ObjectId(petId);
+    }
+
+    if (startDate || endDate) {
+      whereClause.date = {};
+      if (startDate) {
+        whereClause.date.$gte = startDate;
+      }
+      if (endDate) {
+        whereClause.date.$lte = endDate;
+      }
+    }
+
+    const expenses = await ExpenseModel.find(whereClause)
+      .sort({ date: -1 })
+      .exec();
+
+    const totalsByCategory = expenses.reduce(
+      (acc: Record<string, number>, expense: HydratedDocument<IExpenseDocument>) => {
+        const key = expense.category || 'other';
+        acc[key] = (acc[key] ?? 0) + expense.amount;
+        return acc;
+      },
+      {}
+    );
+
+    const doc = new PDFDocument({ margin: 50 });
+    const chunks: Buffer[] = [];
+
+    doc.on('data', chunk => {
+      chunks.push(chunk as Buffer);
+    });
+
+    const formatCurrency = (value: number, currency?: string): string =>
+      `${value.toFixed(2)} ${currency ?? ''}`.trim();
+
+    doc.fontSize(18).text('Expenses Report', { align: 'center' });
+    doc.moveDown(0.5);
+    doc
+      .fontSize(10)
+      .text(
+        `Date: ${new Date().toISOString()}${startDate || endDate ? ` | Range: ${startDate?.toISOString() ?? '-'} to ${endDate?.toISOString() ?? '-'}` : ''}`,
+        { align: 'center' }
+      );
+
+    doc.moveDown();
+    doc.fontSize(12).text('Summary', { underline: true });
+    doc.moveDown(0.25);
+    doc.fontSize(10).text(`Total records: ${expenses.length}`);
+    const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    doc.text(`Total amount: ${formatCurrency(totalAmount, expenses[0]?.currency)}`);
+
+    doc.moveDown(0.5);
+    doc.fontSize(11).text('Totals by category:');
+    Object.entries(totalsByCategory).forEach(([category, total]) => {
+      doc.fontSize(10).text(`- ${category}: ${formatCurrency(total, expenses[0]?.currency)}`);
+    });
+
+    doc.moveDown();
+    doc.fontSize(12).text('Expenses', { underline: true });
+    doc.moveDown(0.25);
+
+    expenses.forEach(expense => {
+      doc
+        .fontSize(10)
+        .text(
+          `${expense.date.toISOString().split('T')[0]} • ${expense.category} • ${formatCurrency(expense.amount, expense.currency)}`,
+          { continued: false }
+        );
+      if (expense.description) {
+        doc.fontSize(9).fillColor('gray').text(expense.description);
+        doc.fillColor('black');
+      }
+      if (expense.vendor || expense.notes) {
+        doc
+          .fontSize(9)
+          .text(
+            [expense.vendor ? `Vendor: ${expense.vendor}` : null, expense.notes ? `Notes: ${expense.notes}` : null]
+              .filter(Boolean)
+              .join(' • ')
+          );
+      }
+      doc.moveDown(0.5);
+    });
+
+    doc.end();
+
+    return await new Promise<Buffer>((resolve, reject) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+    });
   }
 }

@@ -13,12 +13,15 @@ import {
 import { createError } from '../middleware/errorHandler';
 import { parseUTCDate } from '../lib/dateUtils';
 import { IExpenseDocument } from '../models/mongoose';
+import { ReportService } from '../services/reportService';
 
 export class ExpenseController {
   private expenseService: ExpenseService;
+  private reportService: ReportService;
 
   constructor() {
     this.expenseService = new ExpenseService();
+    this.reportService = new ReportService();
   }
 
   // GET /api/expenses OR /api/pets/:petId/expenses - Get expenses for authenticated user
@@ -377,18 +380,64 @@ export class ExpenseController {
   };
 
   // GET /api/expenses/export/pdf - Export expenses as PDF
-  exportExpensesPDF = (
+  exportExpensesPDF = async (
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
-  ): void => {
+  ): Promise<void> => {
     try {
-      // This will be implemented after pdfkit is installed
-      throw createError(
-        'PDF export not yet implemented',
-        501,
-        'NOT_IMPLEMENTED'
+      const userId = requireAuth(req);
+      const petId = req.query.petId as string;
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate as string)
+        : undefined;
+      const endDate = req.query.endDate
+        ? new Date(req.query.endDate as string)
+        : undefined;
+
+      const pdfBuffer = await this.expenseService.exportExpensesPDF(
+        userId,
+        petId,
+        startDate,
+        endDate
       );
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        'attachment; filename="expenses.pdf"'
+      );
+      res.status(200).send(pdfBuffer);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // GET /api/expenses/export/vet-summary - Export vet summary PDF
+  exportVetSummaryPDF = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const userId = requireAuth(req);
+      const petId = req.query.petId as string;
+
+      if (!petId) {
+        throw createError('Pet ID is required for vet summary', 400, 'MISSING_PET_ID');
+      }
+
+      const pdfBuffer = await this.reportService.generateVetSummaryPDF({
+        userId,
+        petId,
+      });
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="vet-summary-${petId}.pdf"`
+      );
+      res.status(200).send(pdfBuffer);
     } catch (error) {
       next(error);
     }

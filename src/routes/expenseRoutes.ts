@@ -65,6 +65,7 @@ router.get('/monthly', expenseController.getMonthlyExpenses);
 router.get('/yearly', expenseController.getYearlyExpenses);
 router.get('/export/csv', expenseController.exportExpensesCSV);
 router.get('/export/pdf', expenseController.exportExpensesPDF);
+router.get('/export/vet-summary', expenseController.exportVetSummaryPDF);
 
 // Category route
 router.get('/by-category/:category', expenseController.getExpensesByCategory);

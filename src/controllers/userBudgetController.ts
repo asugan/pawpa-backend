@@ -114,4 +114,21 @@ export class UserBudgetController {
       next(error);
     }
   };
+
+  // GET /api/budget/alerts - Check budget alerts with notification payload
+  checkBudgetAlerts = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const userId = requireAuth(req);
+
+      const alert = await this.userBudgetService.checkBudgetAlert(userId);
+
+      successResponse(res, alert); // can be null
+    } catch (error) {
+      next(error);
+    }
+  };
 }

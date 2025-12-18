@@ -15,6 +15,16 @@ export interface BudgetStatus {
     petName: string;
     spending: number;
   }[];
+  monthOverMonth?: {
+    current: number;
+    previous: number;
+    changePct: number;
+  };
+  categoryBreakdown?: {
+    category: string;
+    total: number;
+    percentage: number;
+  }[];
 }
 
 // Budget alert interface
@@ -29,6 +39,11 @@ export interface BudgetAlert {
     petName: string;
     spending: number;
   }[];
+  notificationPayload?: {
+    title: string;
+    body: string;
+    severity: 'warning' | 'critical';
+  };
 }
 
 interface MonthlyExpenseAggregate {
@@ -37,6 +52,7 @@ interface MonthlyExpenseAggregate {
   description: string;
   date: Date;
   petName: string;
+  category?: string;
 }
 
 export class UserBudgetService {
@@ -136,6 +152,16 @@ export class UserBudgetService {
       59,
       999
     );
+    const prevStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevEndDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      0,
+      23,
+      59,
+      59,
+      999
+    );
 
     // Get all expenses for the user in current month with matching currency
     const monthlyExpenses = await ExpenseModel.aggregate<MonthlyExpenseAggregate>([
@@ -164,7 +190,21 @@ export class UserBudgetService {
           amount: 1,
           description: 1,
           date: 1,
-          petName: '$pet.name'
+          petName: '$pet.name',
+          category: 1
+        }
+      }
+    ]);
+
+    const previousMonthExpenses = await ExpenseModel.aggregate<MonthlyExpenseAggregate>([
+      {
+        $match: {
+          userId: new Types.ObjectId(userId),
+          currency: budget.currency,
+          date: {
+            $gte: prevStartDate,
+            $lte: prevEndDate
+          }
         }
       }
     ]);
@@ -198,6 +238,30 @@ export class UserBudgetService {
       []
     );
 
+    const categoryTotals = monthlyExpenses.reduce(
+      (acc: Record<string, number>, expense: MonthlyExpenseAggregate) => {
+        const categoryKey = (expense as unknown as { category?: string }).category ?? 'other';
+        acc[categoryKey] = (acc[categoryKey] ?? 0) + expense.amount;
+        return acc;
+      },
+      {}
+    );
+    const categoryBreakdown =
+      currentSpending > 0
+        ? Object.entries(categoryTotals).map(([category, total]) => ({
+            category,
+            total,
+            percentage: (total / currentSpending) * 100,
+          }))
+        : [];
+
+    const prevTotal = previousMonthExpenses.reduce(
+      (sum: number, expense: MonthlyExpenseAggregate) => sum + expense.amount,
+      0
+    );
+    const changePct =
+      prevTotal === 0 ? (currentSpending > 0 ? 100 : 0) : ((currentSpending - prevTotal) / prevTotal) * 100;
+
     return {
       budget,
       currentSpending,
@@ -205,6 +269,12 @@ export class UserBudgetService {
       remainingAmount,
       isAlert,
       petBreakdown,
+      monthOverMonth: {
+        current: currentSpending,
+        previous: prevTotal,
+        changePct,
+      },
+      categoryBreakdown,
     };
   }
 
@@ -218,6 +288,13 @@ export class UserBudgetService {
       return null;
     }
 
+    const severity =
+      budgetStatus.percentage >= 100 ? 'critical' : 'warning';
+    const payloadBody =
+      budgetStatus.percentage >= 100
+        ? 'Budget limit exceeded. Review your expenses.'
+        : 'You are nearing your budget limit. Consider adjusting spending.';
+
     return {
       budget: budgetStatus.budget,
       currentSpending: budgetStatus.currentSpending,
@@ -225,6 +302,11 @@ export class UserBudgetService {
       isExceeded: budgetStatus.percentage >= 100,
       remainingAmount: budgetStatus.remainingAmount,
       petBreakdown: budgetStatus.petBreakdown,
+      notificationPayload: {
+        title: severity === 'critical' ? 'Budget exceeded' : 'Budget alert',
+        body: payloadBody,
+        severity,
+      },
     };
   }
 

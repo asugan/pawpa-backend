@@ -39,5 +39,7 @@ router.delete('/', userBudgetController.deleteUserBudget);
 
 // GET /status - Get budget status
 router.get('/status', userBudgetController.getBudgetStatus);
+// GET /alerts - Get budget alerts (with notification payload)
+router.get('/alerts', userBudgetController.checkBudgetAlerts);
 
 export default router;
