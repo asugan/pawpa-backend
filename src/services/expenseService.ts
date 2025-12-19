@@ -309,6 +309,9 @@ export class ExpenseService {
       .sort({ date: -1 })
       .exec();
 
+    const escapeCsvValue = (value: string): string =>
+      `"${value.replace(/"/g, '""')}"`;
+
     // Generate CSV
     const headers = [
       'ID',
@@ -337,7 +340,7 @@ export class ExpenseService {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
+      ...rows.map(row => row.map(cell => escapeCsvValue(String(cell))).join(',')),
     ].join('\n');
 
     return csvContent;
@@ -369,14 +372,16 @@ export class ExpenseService {
       .sort({ date: -1 })
       .exec();
 
-    const totalsByCategory = expenses.reduce(
-      (acc: Record<string, number>, expense: HydratedDocument<IExpenseDocument>) => {
-        const key = expense.category || 'other';
-        acc[key] = (acc[key] ?? 0) + expense.amount;
-        return acc;
-      },
-      {}
-    );
+    const totalsByCategoryCurrency: Record<string, number> = {};
+    const totalsByCurrency: Record<string, number> = {};
+
+    for (const expense of expenses) {
+      const category = expense.category || 'other';
+      const currency = expense.currency || 'UNKNOWN';
+      const key = `${category}__${currency}`;
+      totalsByCategoryCurrency[key] = (totalsByCategoryCurrency[key] ?? 0) + expense.amount;
+      totalsByCurrency[currency] = (totalsByCurrency[currency] ?? 0) + expense.amount;
+    }
 
     const doc = new PDFDocument({ margin: 50 });
     const chunks: Buffer[] = [];
@@ -401,13 +406,29 @@ export class ExpenseService {
     doc.fontSize(12).text('Summary', { underline: true });
     doc.moveDown(0.25);
     doc.fontSize(10).text(`Total records: ${expenses.length}`);
-    const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-    doc.text(`Total amount: ${formatCurrency(totalAmount, expenses[0]?.currency)}`);
+    const currencyEntries = Object.entries(totalsByCurrency);
+    if (currencyEntries.length === 0) {
+      doc.text('Total amount: -');
+    } else if (currencyEntries.length === 1) {
+      const firstEntry = currencyEntries[0];
+      if (firstEntry) {
+        const currency = firstEntry[0];
+        const total = firstEntry[1];
+        doc.text(`Total amount: ${formatCurrency(total, currency)}`);
+      }
+    } else {
+      doc.text('Total amount:');
+      currencyEntries.forEach(([currency, total]) => {
+        doc.fontSize(10).text(`- ${formatCurrency(total, currency)}`);
+      });
+    }
 
     doc.moveDown(0.5);
     doc.fontSize(11).text('Totals by category:');
-    Object.entries(totalsByCategory).forEach(([category, total]) => {
-      doc.fontSize(10).text(`- ${category}: ${formatCurrency(total, expenses[0]?.currency)}`);
+    const categoryCurrencyEntries = Object.entries(totalsByCategoryCurrency);
+    categoryCurrencyEntries.forEach(([key, total]) => {
+      const [category, currency] = key.split('__');
+      doc.fontSize(10).text(`- ${category} (${currency}): ${formatCurrency(total, currency)}`);
     });
 
     doc.moveDown();

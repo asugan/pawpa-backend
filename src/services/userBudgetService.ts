@@ -34,6 +34,7 @@ export interface BudgetAlert {
   percentage: number;
   isExceeded: boolean;
   remainingAmount: number;
+  isAlert: boolean;
   petBreakdown?: {
     petId: string;
     petName: string;
@@ -301,6 +302,7 @@ export class UserBudgetService {
       percentage: budgetStatus.percentage,
       isExceeded: budgetStatus.percentage >= 100,
       remainingAmount: budgetStatus.remainingAmount,
+      isAlert: true,
       petBreakdown: budgetStatus.petBreakdown,
       notificationPayload: {
         title: severity === 'critical' ? 'Budget exceeded' : 'Budget alert',
