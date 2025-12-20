@@ -138,29 +138,6 @@ export class SubscriptionController {
     }
   };
 
-  /**
-   * POST /api/subscription/check-device
-   * Check if a device is eligible for a trial
-   */
-  checkDeviceEligibility = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { deviceId } = req.body as { deviceId?: string };
-
-      if (!deviceId) {
-        throw createError('Device ID is required', 400, 'MISSING_DEVICE_ID');
-      }
-
-      const eligibility =
-        await this.subscriptionService.checkDeviceEligibility(deviceId);
-      successResponse(res, eligibility);
-    } catch (error) {
-      next(error);
-    }
-  };
 
   /**
    * POST /api/subscription/deactivate-trial

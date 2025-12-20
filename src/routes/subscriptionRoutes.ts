@@ -11,10 +11,6 @@ const startTrialSchema = z.object({
   deviceId: z.string().min(1, 'Device ID is required'),
 });
 
-const checkDeviceSchema = z.object({
-  deviceId: z.string().min(1, 'Device ID is required'),
-});
-
 // Routes
 
 // GET /api/subscription/status - Get unified subscription status (main endpoint)
@@ -28,13 +24,6 @@ router.post(
   '/start-trial',
   validateRequest(startTrialSchema),
   subscriptionController.startTrial
-);
-
-// POST /api/subscription/check-device - Check device eligibility
-router.post(
-  '/check-device',
-  validateRequest(checkDeviceSchema),
-  subscriptionController.checkDeviceEligibility
 );
 
 // POST /api/subscription/deactivate-trial - Deprecated: Trial is auto-converted on purchase

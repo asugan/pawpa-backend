@@ -23,12 +23,6 @@ export interface UnifiedSubscriptionStatus {
   provider: 'internal' | 'revenuecat' | null;
 }
 
-export interface DeviceEligibility {
-  canStartTrial: boolean;
-  reason?: string;
-  existingTrialUserId?: string;
-}
-
 export class SubscriptionService {
   /**
    * Get unified subscription status for a user
@@ -104,24 +98,6 @@ export class SubscriptionService {
     return true;
   }
 
-  /**
-   * Check device eligibility with detailed info
-   */
-  async checkDeviceEligibility(deviceId: string): Promise<DeviceEligibility> {
-    const existingDevice = await DeviceTrialRegistryModel.findOne({ deviceId }).exec();
-
-    if (existingDevice) {
-      return {
-        canStartTrial: false,
-        reason: 'Device has already used a trial',
-        existingTrialUserId: existingDevice.firstTrialUserId.toString(),
-      };
-    }
-
-    return {
-      canStartTrial: true,
-    };
-  }
 
   /**
    * Start an internal trial for a user
