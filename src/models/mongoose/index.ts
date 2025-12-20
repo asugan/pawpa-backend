@@ -8,6 +8,7 @@ export { BudgetLimitModel } from './budgetLimit';
 export { UserBudgetModel } from './userBudget';
 export { SubscriptionModel } from './subscription';
 export { DeviceTrialRegistryModel } from './deviceTrialRegistry';
+export { UserTrialRegistryModel } from './userTrialRegistry';
 
 // Export document interfaces
 export type {
@@ -19,5 +20,6 @@ export type {
   IUserBudgetDocument,
   ISubscriptionDocument,
   IBudgetLimitDocument,
-  IDeviceTrialRegistryDocument
+  IDeviceTrialRegistryDocument,
+  IUserTrialRegistryDocument
 } from './types';

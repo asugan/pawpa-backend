@@ -134,3 +134,12 @@ export interface IDeviceTrialRegistryDocument extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// User Trial Registry Document Interface
+export interface IUserTrialRegistryDocument extends Document {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  trialUsedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}

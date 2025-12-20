@@ -1,6 +1,7 @@
 import { HydratedDocument } from 'mongoose';
 import { ISubscriptionDocument, SubscriptionModel } from '../models/mongoose';
 import { DeviceTrialRegistryModel } from '../models/mongoose/deviceTrialRegistry';
+import { UserTrialRegistryModel } from '../models/mongoose/userTrialRegistry';
 import {
   SUBSCRIPTION_CONFIG,
   SUBSCRIPTION_PROVIDERS,
@@ -40,18 +41,18 @@ export class SubscriptionService {
     // Get the user's active subscription (either internal trial or revenuecat)
     const subscription = await SubscriptionModel.findOne({
       userId,
-      status: SUBSCRIPTION_STATUSES.ACTIVE,
+      status: { $in: [SUBSCRIPTION_STATUSES.ACTIVE, SUBSCRIPTION_STATUSES.CANCELLED] },
       expiresAt: { $gt: new Date() }
     }).exec();
 
     if (!subscription) {
-      // No active subscription - check if there's an expired one
-      const expiredSubscription = await SubscriptionModel.findOne({ userId }).exec();
+      // No active subscription - check last known subscription for status flags
+      const latestSubscription = await SubscriptionModel.findOne({ userId }).sort({ expiresAt: -1 }).exec();
 
       // Check if device can start trial
       const canStartTrial = deviceId
-        ? await this.checkDeviceCanStartTrial(deviceId)
-        : !expiredSubscription; // Can start if no previous subscription exists
+        ? await this.checkDeviceCanStartTrial(deviceId, userId)
+        : false;
 
       return {
         hasActiveSubscription: false,
@@ -59,9 +60,9 @@ export class SubscriptionService {
         tier: null,
         expiresAt: null,
         daysRemaining: 0,
-        isExpired: !!expiredSubscription,
+        isExpired: !!latestSubscription,
         isCancelled:
-          expiredSubscription?.status === SUBSCRIPTION_STATUSES.CANCELLED,
+          latestSubscription?.status === SUBSCRIPTION_STATUSES.CANCELLED,
         canStartTrial,
         provider: null,
       };
@@ -80,7 +81,7 @@ export class SubscriptionService {
       expiresAt: expiresAt.toISOString(),
       daysRemaining,
       isExpired: false,
-      isCancelled: false,
+      isCancelled: subscription.status === SUBSCRIPTION_STATUSES.CANCELLED,
       canStartTrial: false, // Already has subscription
       provider: subscription.provider,
     };
@@ -89,9 +90,18 @@ export class SubscriptionService {
   /**
    * Check if a device has already used a trial
    */
-  async checkDeviceCanStartTrial(deviceId: string): Promise<boolean> {
+  async checkDeviceCanStartTrial(deviceId: string, userId?: string): Promise<boolean> {
     const existingDevice = await DeviceTrialRegistryModel.findOne({ deviceId }).exec();
-    return !existingDevice;
+    if (existingDevice) {
+      return false;
+    }
+
+    if (userId) {
+      const existingUserTrial = await UserTrialRegistryModel.findOne({ userId }).exec();
+      return !existingUserTrial;
+    }
+
+    return true;
   }
 
   /**
@@ -118,10 +128,21 @@ export class SubscriptionService {
    */
   async startTrial(userId: string, deviceId: string): Promise<HydratedDocument<ISubscriptionDocument>> {
     // Check if user already has any subscription
-    const existingSubscription = await SubscriptionModel.findOne({ userId }).exec();
+    const existingSubscription = await SubscriptionModel.findOne({
+      userId,
+      status: { $in: [SUBSCRIPTION_STATUSES.ACTIVE, SUBSCRIPTION_STATUSES.CANCELLED] },
+      expiresAt: { $gt: new Date() },
+    }).exec();
 
     if (existingSubscription) {
       throw new Error('User already has a subscription');
+    }
+
+    // Check if user has already used a trial
+    const existingUserTrial = await UserTrialRegistryModel.findOne({ userId }).exec();
+
+    if (existingUserTrial) {
+      throw new Error('User has already used a trial');
     }
 
     // Check if device has already used a trial
@@ -158,6 +179,13 @@ export class SubscriptionService {
     });
 
     await deviceTrial.save();
+
+    const userTrial = new UserTrialRegistryModel({
+      userId,
+      trialUsedAt: now,
+    });
+
+    await userTrial.save();
 
     return savedSubscription;
   }

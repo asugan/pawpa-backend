@@ -124,6 +124,15 @@ export class SubscriptionController {
             )
           );
         }
+        if (error.message === 'User has already used a trial') {
+          return next(
+            createError(
+              'This user has already used a trial',
+              409,
+              'USER_TRIAL_USED'
+            )
+          );
+        }
       }
       next(error);
     }
