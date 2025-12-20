@@ -1,5 +1,26 @@
 import { Document, Types } from 'mongoose';
 
+export type HealthRecordType =
+  | 'checkup'
+  | 'visit'
+  | 'surgery'
+  | 'dental'
+  | 'grooming'
+  | 'other';
+
+export type EventType =
+  | 'feeding'
+  | 'exercise'
+  | 'grooming'
+  | 'play'
+  | 'training'
+  | 'vet_visit'
+  | 'walk'
+  | 'bath'
+  | 'vaccination'
+  | 'medication'
+  | 'other';
+
 // Pet Document Interface
 export interface IPetDocument extends Document {
   _id: Types.ObjectId;
@@ -20,18 +41,15 @@ export interface IHealthRecordDocument extends Document {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
   petId: Types.ObjectId;
-  type: string;
+  type: HealthRecordType;
   title: string;
   description?: string;
   date: Date;
   veterinarian?: string;
   clinic?: string;
   cost?: number;
-  nextDueDate?: Date;
+  notes?: string;
   attachments?: string;
-  vaccineName?: string;
-  vaccineManufacturer?: string;
-  batchNumber?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,12 +61,18 @@ export interface IEventDocument extends Document {
   petId: Types.ObjectId;
   title: string;
   description?: string;
-  type: string;
+  type: EventType;
   startTime: Date;
   endTime?: Date;
   location?: string;
   notes?: string;
   reminder: boolean;
+  vaccineName?: string;
+  vaccineManufacturer?: string;
+  batchNumber?: string;
+  medicationName?: string;
+  dosage?: string;
+  frequency?: string;
   createdAt: Date;
   updatedAt: Date;
 }

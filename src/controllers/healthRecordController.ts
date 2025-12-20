@@ -152,7 +152,6 @@ export class HealthRecordController {
       const convertedRecordData = {
         ...recordData,
         date: parseUTCDate(recordData.date),
-        nextDueDate: recordData.nextDueDate ? parseUTCDate(recordData.nextDueDate) : undefined,
       };
 
       const record = await this.healthRecordService.createHealthRecord(
@@ -184,9 +183,6 @@ export class HealthRecordController {
       const convertedUpdates = {
         ...updates,
         date: updates.date ? parseUTCDate(updates.date) : undefined,
-        nextDueDate: updates.nextDueDate !== undefined
-          ? (updates.nextDueDate ? parseUTCDate(updates.nextDueDate) : null)
-          : undefined,
       };
 
       const record = await this.healthRecordService.updateHealthRecord(
@@ -242,20 +238,4 @@ export class HealthRecordController {
     }
   };
 
-  // GET /api/health-records/upcoming - Get upcoming vaccinations
-  getUpcomingVaccinations = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const userId = requireAuth(req);
-      const petId = req.query.petId as string;
-      const vaccinations =
-        await this.healthRecordService.getUpcomingVaccinations(userId, petId);
-      successResponse(res, vaccinations);
-    } catch (error) {
-      next(error);
-    }
-  };
 }

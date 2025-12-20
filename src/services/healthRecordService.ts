@@ -115,25 +115,6 @@ export class HealthRecordService {
   }
 
   /**
-   * Get upcoming vaccinations for a user
+   * Health records are historical, so no upcoming queries live here.
    */
-  async getUpcomingVaccinations(
-    userId: string,
-    petId?: string
-  ): Promise<HydratedDocument<IHealthRecordDocument>[]> {
-    const now = new Date();
-    const whereClause: QueryFilter<IHealthRecordDocument> = {
-      userId: new Types.ObjectId(userId),
-      type: 'vaccination',
-      nextDueDate: { $gte: now }
-    };
-
-    if (petId) {
-      whereClause.petId = new Types.ObjectId(petId);
-    }
-
-    return await HealthRecordModel.find(whereClause)
-      .sort({ nextDueDate: 1 })
-      .exec();
-  }
 }

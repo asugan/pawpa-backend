@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { Types } from 'mongoose';
-import { ExpenseModel, HealthRecordModel, PetModel } from '../models/mongoose';
+import { EventModel, ExpenseModel, HealthRecordModel, PetModel } from '../models/mongoose';
 import { createError } from '../middleware/errorHandler';
 
 interface VetSummaryInput {
@@ -26,14 +26,30 @@ export class ReportService {
     const vetVisits = healthRecords.filter(
       record =>
         record.type === 'visit' ||
-        record.type === 'veterinary' ||
+        record.type === 'checkup' ||
         !!record.veterinarian
     );
-    const vaccinations = healthRecords.filter(record => record.type === 'vaccination');
-    const medications = healthRecords.filter(record => record.type === 'medication');
-    const upcomingDue = healthRecords
-      .filter(record => record.nextDueDate && record.nextDueDate > new Date())
-      .sort((a, b) => (a.nextDueDate?.getTime() ?? 0) - (b.nextDueDate?.getTime() ?? 0));
+    const events = await EventModel.find({
+      userId: new Types.ObjectId(userId),
+      petId: new Types.ObjectId(petId),
+    })
+      .sort({ startTime: -1 })
+      .exec();
+
+    const now = new Date();
+    const vaccinations = events.filter(
+      event => event.type === 'vaccination' && event.startTime <= now
+    );
+    const medications = events.filter(
+      event => event.type === 'medication' && event.startTime <= now
+    );
+    const upcomingDue = events
+      .filter(
+        event =>
+          (event.type === 'vaccination' || event.type === 'medication') &&
+          event.startTime > now
+      )
+      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
     const expenses = await ExpenseModel.find({
       userId: new Types.ObjectId(userId),
@@ -105,12 +121,8 @@ export class ReportService {
         doc
           .fontSize(10)
           .text(
-            `${formatDate(record.date)} • ${record.vaccineName ?? record.title} (${record.vaccineManufacturer ?? 'N/A'})`
+            `${formatDate(record.startTime)} • ${record.vaccineName ?? record.title} (${record.vaccineManufacturer ?? 'N/A'})`
           );
-        if (record.nextDueDate) {
-          doc.fontSize(9).fillColor('gray').text(`Next due: ${formatDate(record.nextDueDate)}`);
-          doc.fillColor('black');
-        }
         doc.moveDown(0.3);
       });
     }
@@ -122,7 +134,9 @@ export class ReportService {
       doc.fontSize(10).text('No medications recorded.');
     } else {
       medications.slice(0, 5).forEach(record => {
-        doc.fontSize(10).text(`${formatDate(record.date)} • ${record.title}`);
+        doc
+          .fontSize(10)
+          .text(`${formatDate(record.startTime)} • ${record.medicationName ?? record.title}`);
         if (record.description) {
           doc.fontSize(9).fillColor('gray').text(record.description);
           doc.fillColor('black');
@@ -140,7 +154,7 @@ export class ReportService {
       upcomingDue.slice(0, 5).forEach(record => {
         doc
           .fontSize(10)
-          .text(`${formatDate(record.nextDueDate ?? record.date)} • ${record.title}`);
+          .text(`${formatDate(record.startTime)} • ${record.title}`);
       });
     }
 

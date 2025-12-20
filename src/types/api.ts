@@ -1,3 +1,5 @@
+import type { EventType, HealthRecordType } from '../models/mongoose/types';
+
 // API Response Types
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -27,6 +29,8 @@ export interface PaginationMeta {
   totalPages: number;
 }
 
+export type { EventType, HealthRecordType } from '../models/mongoose/types';
+
 // Request/Response types for each entity
 export interface CreatePetRequest {
   name: string;
@@ -50,56 +54,62 @@ export interface UpdatePetRequest {
 
 export interface CreateHealthRecordRequest {
   petId: string;
-  type: string;
+  type: HealthRecordType;
   title: string;
   description?: string;
   date: string;
   veterinarian?: string;
   clinic?: string;
   cost?: number;
-  nextDueDate?: string;
+  notes?: string;
   attachments?: string;
-  vaccineName?: string;
-  vaccineManufacturer?: string;
-  batchNumber?: string;
 }
 
 export interface UpdateHealthRecordRequest {
-  type?: string;
+  type?: HealthRecordType;
   title?: string;
   description?: string;
   date?: string;
   veterinarian?: string;
   clinic?: string;
   cost?: number;
-  nextDueDate?: string;
+  notes?: string;
   attachments?: string;
-  vaccineName?: string;
-  vaccineManufacturer?: string;
-  batchNumber?: string;
 }
 
 export interface CreateEventRequest {
   petId: string;
   title: string;
   description?: string;
-  type: string;
+  type: EventType;
   startTime: string;
   endTime?: string;
   location?: string;
   notes?: string;
   reminder?: boolean;
+  vaccineName?: string;
+  vaccineManufacturer?: string;
+  batchNumber?: string;
+  medicationName?: string;
+  dosage?: string;
+  frequency?: string;
 }
 
 export interface UpdateEventRequest {
   title?: string;
   description?: string;
-  type?: string;
+  type?: EventType;
   startTime?: string;
   endTime?: string;
   location?: string;
   notes?: string;
   reminder?: boolean;
+  vaccineName?: string;
+  vaccineManufacturer?: string;
+  batchNumber?: string;
+  medicationName?: string;
+  dosage?: string;
+  frequency?: string;
 }
 
 export interface CreateFeedingScheduleRequest {

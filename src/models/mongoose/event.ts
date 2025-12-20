@@ -12,6 +12,12 @@ const eventSchema = new Schema<IEventDocument>({
   location: String,
   notes: String,
   reminder: { type: Boolean, default: false },
+  vaccineName: String,
+  vaccineManufacturer: String,
+  batchNumber: String,
+  medicationName: String,
+  dosage: String,
+  frequency: String,
 }, {
   timestamps: true
 });

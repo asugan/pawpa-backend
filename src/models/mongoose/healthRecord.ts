@@ -11,11 +11,8 @@ const healthRecordSchema = new Schema<IHealthRecordDocument>({
   veterinarian: String,
   clinic: String,
   cost: Number,
-  nextDueDate: Date,
+  notes: String,
   attachments: String,
-  vaccineName: String,
-  vaccineManufacturer: String,
-  batchNumber: String,
 }, {
   timestamps: true
 });

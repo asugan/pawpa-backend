@@ -12,9 +12,8 @@ const healthRecordController = new HealthRecordController();
 const createHealthRecordSchema = z.object({
   petId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid pet ID format'),
   type: z.enum([
-    'vaccination',
     'checkup',
-    'medication',
+    'visit',
     'surgery',
     'dental',
     'grooming',
@@ -26,26 +25,11 @@ const createHealthRecordSchema = z.object({
   veterinarian: z.string().optional(),
   clinic: z.string().optional(),
   cost: z.number().nonnegative().optional(),
-  nextDueDate: z.string().datetime().optional().nullable(),
   notes: z.string().optional(),
-  // Vaccination specific fields
-  vaccineName: z.string().optional(),
-  vaccineManufacturer: z.string().optional(),
-  batchNumber: z.string().optional(),
-  // Medication specific fields
-  medicationName: z.string().optional(),
-  dosage: z.string().optional(),
-  frequency: z.string().optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  // Legacy field
   attachments: z.string().optional(),
 });
 
 const updateHealthRecordSchema = createHealthRecordSchema.partial();
-
-// Routes
-router.get('/upcoming', healthRecordController.getUpcomingVaccinations);
 
 // GET / - If called as /api/health-records, use getAllHealthRecords (accepts petId as query param)
 // GET / - If called as /api/pets/:petId/health-records, use getHealthRecordsByPetId (gets petId from params)
