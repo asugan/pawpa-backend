@@ -125,3 +125,6 @@ build/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Vitest
+vitest-report/
