@@ -26,7 +26,6 @@
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": false,
     "noPropertyAccessFromIndexSignature": false,
-    "types": ["vitest/globals"],
     "paths": {
       "@/*": ["./src/*"]
     }

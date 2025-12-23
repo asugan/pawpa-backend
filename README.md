@@ -21,7 +21,7 @@ MongoDB.
 
 ### Prerequisites
 
-- Node.js (v18 or higher)
+- Node.js (v20.19 or higher)
 - MongoDB (local or cloud instance)
 - npm or yarn
 

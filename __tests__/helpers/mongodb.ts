@@ -1,13 +1,11 @@
-import { beforeAll, afterEach, afterAll } from 'vitest';
+import { afterAll, afterEach, beforeAll } from 'vitest';
 import mongoose from 'mongoose';
 
 export const setupTestDB = () => {
   beforeAll(async () => {
-    const uri = process.env.MONGODB_TEST_URI || process.env.MONGODB_URI;
+    const uri = process.env.MONGODB_TEST_URI;
     if (!uri) {
-      throw new Error(
-        'MONGODB_TEST_URI or MONGODB_URI environment variable is required for tests'
-      );
+      throw new Error('MONGODB_TEST_URI environment variable is required for tests');
     }
     await mongoose.connect(uri);
   });

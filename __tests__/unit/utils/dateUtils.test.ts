@@ -1,14 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  parseUTCDate,
-  toUTCISOString,
-  toUTCDateString,
-  parseAsUTCDate,
-  normalizeDatesToUTC,
   createUTCDateFilter,
   getUTCTodayBoundaries,
-  isUTCToday,
   getUTCUpcomingBoundaries,
+  isUTCToday,
+  normalizeDatesToUTC,
+  parseAsUTCDate,
+  parseUTCDate,
+  toUTCDateString,
+  toUTCISOString,
 } from '../../../src/lib/dateUtils';
 
 describe('dateUtils', () => {
@@ -67,9 +67,9 @@ describe('dateUtils', () => {
 
     it('should normalize Date object to UTC ISO', () => {
       const date = new Date('2024-01-15T10:30:00.000Z');
-      const obj = { id: '123', date };
-      const result = normalizeDatesToUTC(obj as Record<string, unknown>, ['date']);
-      expect((result as Record<string, unknown>).date).toBe('2024-01-15T10:30:00.000Z');
+      const obj = { id: '123', date } as Record<string, unknown>;
+      const result = normalizeDatesToUTC(obj, ['date']);
+      expect(result.date).toBe('2024-01-15T10:30:00.000Z');
     });
 
     it('should return same object if date field is not specified', () => {

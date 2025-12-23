@@ -6,7 +6,7 @@ export interface MockAuthUser {
 }
 
 export const mockAuth = (userId?: string): MockAuthUser => ({
-  userId: userId || 'test-user-id',
+  userId: userId ?? 'test-user-id',
   email: 'test@example.com',
   name: 'Test User',
 });

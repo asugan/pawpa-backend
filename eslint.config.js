@@ -59,10 +59,11 @@ export default tseslint.config(
   },
 
   {
-    files: ['**/*.test.ts', '**/*.spec.ts', '**/__tests__/**/*.ts'],
+    files: ['**/*.test.ts', '**/*.spec.ts', '**/__tests__/**/*.ts', 'vitest.setup.ts'],
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: false,
+        project: ['./tsconfig.test.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
