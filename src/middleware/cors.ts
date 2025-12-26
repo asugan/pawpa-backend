@@ -4,6 +4,7 @@ import cors from 'cors';
 const allowedOrigins = [
   'http://localhost:3001', // Next.js web app
   'http://localhost:8081', // Expo mobile app
+  'https://appleid.apple.com', // Sign in with Apple callbacks
   process.env.CORS_ORIGIN, // Custom origin from env
 ].filter(Boolean); // Remove undefined values
 
