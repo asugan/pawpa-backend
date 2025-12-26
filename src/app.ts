@@ -11,6 +11,23 @@ import apiRoutes from './routes';
 
 const app = express();
 
+const trustProxySetting = process.env.TRUST_PROXY;
+if (trustProxySetting !== undefined) {
+  const normalized = trustProxySetting.trim().toLowerCase();
+  if (normalized === 'true') {
+    app.set('trust proxy', true);
+  } else if (normalized === 'false') {
+    app.set('trust proxy', false);
+  } else if (normalized !== '' && !Number.isNaN(Number(normalized))) {
+    app.set('trust proxy', Number(normalized));
+  } else {
+    app.set('trust proxy', trustProxySetting);
+  }
+} else if (process.env.NODE_ENV === 'production') {
+  // Default to trusting the first proxy in production deployments.
+  app.set('trust proxy', 1);
+}
+
 // Security middleware
 app.use(helmet());
 

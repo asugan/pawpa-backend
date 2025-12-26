@@ -3,6 +3,7 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import app from './app';
+import { client as authMongoClient } from './lib/auth';
 
 const PORT = process.env.PORT ?? 3000;
 
@@ -17,6 +18,10 @@ const startServer = async () => {
     // Connect to MongoDB
     await mongoose.connect(mongoUri);
     console.log('Connected to MongoDB');
+
+    // Connect Better Auth MongoDB client
+    await authMongoClient.connect();
+    console.log('Connected to Better Auth MongoDB client');
 
     // Handle connection events
     mongoose.connection.on('error', err => {
@@ -39,7 +44,9 @@ const startServer = async () => {
       console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
       server.close(() => {
         console.log('✅ Server closed gracefully');
-        process.exit(0);
+        void authMongoClient.close().finally(() => {
+          process.exit(0);
+        });
       });
     };
 
