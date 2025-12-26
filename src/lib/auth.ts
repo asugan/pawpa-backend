@@ -23,6 +23,8 @@ if (!authBaseUrl) {
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const appleClientId = process.env.APPLE_CLIENT_ID;
+const appleClientSecret = process.env.APPLE_CLIENT_SECRET;
 
 export const auth: ReturnType<typeof betterAuth> = betterAuth({
   database: mongodbAdapter(db, {
@@ -41,6 +43,14 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
           },
         }
       : {}),
+    ...(appleClientId && appleClientSecret
+      ? {
+          apple: {
+            clientId: appleClientId,
+            clientSecret: appleClientSecret,
+          },
+        }
+      : {}),
   },
   // Enhanced trustedOrigins with mobile app support
   trustedOrigins: [
@@ -49,6 +59,7 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
     'capacitor://localhost',
     'petopia://',
     'petopia-petcare://',
+    'https://appleid.apple.com',
     // Expo development URLs with wildcards
     ...(process.env.NODE_ENV === 'development'
       ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**']
