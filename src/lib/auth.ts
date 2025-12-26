@@ -13,8 +13,16 @@ const db = client.db(); // Uses database name from connection string
 
 const authSecret = process.env.BETTER_AUTH_SECRET;
 if (!authSecret) {
-  throw new Error('AUTH_SECRET is required');
+  throw new Error('BETTER_AUTH_SECRET is required');
 }
+
+const authBaseUrl = process.env.BETTER_AUTH_URL;
+if (!authBaseUrl) {
+  throw new Error('BETTER_AUTH_URL is required');
+}
+
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
 export const auth: ReturnType<typeof betterAuth> = betterAuth({
   database: mongodbAdapter(db, {
@@ -23,7 +31,17 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
     transaction: false, // Disable transactions for standalone MongoDB
   }),
   secret: authSecret,
-  baseURL: process.env.BETTER_AUTH_URL,
+  baseURL: authBaseUrl,
+  socialProviders: {
+    ...(googleClientId && googleClientSecret
+      ? {
+          google: {
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+          },
+        }
+      : {}),
+  },
   // Enhanced trustedOrigins with mobile app support
   trustedOrigins: [
     'http://localhost:8081',
@@ -32,21 +50,12 @@ export const auth: ReturnType<typeof betterAuth> = betterAuth({
     'petopia://',
     'petopia-petcare://',
     // Expo development URLs with wildcards
-    ...(process.env.NODE_ENV === 'development' ? ['exp://*/*'] : ['exp://*']),
+    ...(process.env.NODE_ENV === 'development'
+      ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**']
+      : []),
   ],
   emailAndPassword: {
     enabled: true,
-  },
-
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID ?? '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-    },
-    apple: {
-      clientId: process.env.APPLE_CLIENT_ID ?? '',
-      clientSecret: process.env.APPLE_CLIENT_SECRET ?? '',
-    },
   },
 
   // Add Expo plugin for mobile support
